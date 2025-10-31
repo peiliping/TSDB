@@ -68,6 +68,7 @@ local function executeWrite(tsTable, args)
         else
             error("Args Datas Incomplete.")
         end
+    end
     print(tsTable:writeRecords(records))
 end
 
