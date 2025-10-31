@@ -5,6 +5,7 @@ local TYPE_CONFIGS = {
     shortnumber = { size=2, maxPrecision=15, defaultValue=0, formatUnsigned="<I2", formatSigned="<i2" },
     number      = { size=4, maxPrecision=15, defaultValue=0, formatUnsigned="<I4", formatSigned="<i4" },
     bignumber   = { size=6, maxPrecision=15, defaultValue=0, formatUnsigned="<I6", formatSigned="<i6" },
+    hugenumber  = { size=8, maxPrecision=15, defaultValue=0, formatUnsigned="<I8", formatSigned="<i8" },
 }
 
 function M.calculateSchema(schema)
@@ -124,7 +125,6 @@ function M.unpackRecord(schemaConfig, binaryString)
         end
         table.insert(result, originalValue)
     end
-
     return result
 end
 
