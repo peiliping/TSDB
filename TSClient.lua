@@ -15,16 +15,14 @@ local function executeQuery(tsTable, startTs, endTs, filterZero)
 end
 
 local function executeAgg(tsTable, startTs, endTs, newInterval, args)
+    lcoal columnNames = tsTable.config.columnNames
     local aggs = {}
     for idx = 6, #args do
-        local colName, aggFunction = AggFunctions.parser(args[idx])
-        if not colName or not aggFunction then
-            error(string.format("Invalid aggregation expression: '%s'. Expected format: aggType(columnName)", args[idx]))
+        local aggItem = AggFunctions.parser(args[idx])
+        if not columnNames[aggItem.columnName] then
+            error(string.format("Column name '%s' not found in schema for this table.", aggItem.columnName))
         end
-        if not tsTable.config.columnNames[colName] then
-            error(string.format("Column name '%s' not found in schema for this table.", colName))
-        end
-        table.insert(aggs , {columnName = colName, aggFunction = aggFunction})
+        table.insert(aggs , aggItem)
     end
     local results = tsTable:queryRangeAgg(startTs, endTs, newInterval, aggs)
     if #results > 0 then

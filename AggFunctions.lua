@@ -11,8 +11,15 @@ local FUNCTIONS = {
 }
 
 function M.parser(item)
-	local aggType, colName = string.match(item, "([a-zA-Z]+)%(([^)]+)%)")
-	return colName, FUNCTIONS[aggType]
+	local aggType, columnName = string.match(item, "([a-zA-Z]+)%(([^)]+)%)")
+	if not columnName or not aggType then
+    	error(string.format("Invalid aggregation expression: '%s'. Expected format: aggType(columnName)", item))
+    end
+	local aggFunction = FUNCTIONS[aggType]
+	if not aggFunction then
+		error("Invalid aggType : " .. aggType)
+	end
+	return { columnName = columnName, aggFunction = aggFunction }
 end
 
 return M
