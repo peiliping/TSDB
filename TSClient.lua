@@ -15,7 +15,7 @@ local function executeQuery(tsTable, startTs, endTs, filterZero)
 end
 
 local function executeAgg(tsTable, startTs, endTs, newInterval, args)
-    lcoal columnNames = tsTable.config.columnNames
+    local columnNames = tsTable.config.columnNames
     local aggs = {}
     for idx = 6, #args do
         local aggItem = AggFunctions.parser(args[idx])
@@ -24,7 +24,7 @@ local function executeAgg(tsTable, startTs, endTs, newInterval, args)
         end
         table.insert(aggs , aggItem)
     end
-    local results = tsTable:queryRangeAgg(startTs, endTs, newInterval, aggs)
+    local results = tsTable:queryRangeAggV2(startTs, endTs, newInterval, aggs)
     if #results > 0 then
         for _, record in ipairs(results) do
             print(table.concat(record, " "))
@@ -35,19 +35,39 @@ end
 local function executeWrite(tsTable, args)
     local schema = tsTable.config.schema
     local schemaSize = #schema
-    if (#args - 2) % schemaSize ~= 0 then
-        error("CMD write datas incomplete.")
-    end
-    local numRecords = (#args - 2) / schemaSize
+    local argSize = #args - 2
     local records = {}
-    for idx = 1, numRecords do
-        local record = {}
-        for i, col in ipairs(schema) do
-            local value = args[2 + i + (idx - 1) * schemaSize]
-            table.insert(record, tonumber(value))
+
+    if argSize == 0 then
+        for line in io.stdin:lines() do
+            if #line <= 1024 then
+                local record = {}
+                for value in string.gmatch(line, "[^%s]+") do
+                    table.insert(record, tonumber(value))
+                end
+                if #record == schemaSize then
+                    table.insert(records, record)
+                else
+                    error("Stdin Datas Incomplete.")
+                end
+            else
+                error("Stdin Line Data Too Much.")
+            end
         end
-        table.insert(records, record)
-    end
+    else
+        if argSize % schemaSize == 0 then
+            local numRecords = argSize / schemaSize
+            for idx = 1, numRecords do
+                local record = {}
+                for i, col in ipairs(schema) do
+                    local value = args[2 + i + (idx - 1) * schemaSize]
+                    table.insert(record, tonumber(value))
+                end
+                table.insert(records, record)
+            end
+        else
+            error("Args Datas Incomplete.")
+        end
     print(tsTable:writeRecords(records))
 end
 

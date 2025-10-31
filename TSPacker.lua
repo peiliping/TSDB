@@ -1,7 +1,7 @@
 local M = {}
 
 local TYPE_CONFIGS = {
-    timestamp   = { size=4, maxPrecision=0,  defaultValue=0, formatUnsigned="<I4" },
+    timestamp   = { size=4, maxPrecision=0,  defaultValue=0, formatUnsigned="<I4", formatSigned="<i4" },
     shortnumber = { size=2, maxPrecision=15, defaultValue=0, formatUnsigned="<I2", formatSigned="<i2" },
     number      = { size=4, maxPrecision=15, defaultValue=0, formatUnsigned="<I4", formatSigned="<i4" },
     bignumber   = { size=6, maxPrecision=15, defaultValue=0, formatUnsigned="<I6", formatSigned="<i6" },

@@ -87,8 +87,8 @@ end
 
 function TSTable:queryRange(queryStart, queryEnd, filterZero)
     local recordSize = self.config.recordSize
-    local maxRecordsInBatch = math.floor(8192 / recordSize)
-    
+    local maxRecordsInBatch = math.floor(1048576 / recordSize)
+
     local interval = self.config.schema[1].interval
     queryStart = alignToInterval(queryStart, interval)
     queryEnd = alignToInterval(queryEnd, interval)
@@ -110,7 +110,7 @@ function TSTable:queryRange(queryStart, queryEnd, filterZero)
         local batchSize = recordsToRead * recordSize
         local bulkBinary = file:read(batchSize)
         if not bulkBinary or #bulkBinary == 0 then
-            break 
+            break
         end
         local currentOffset = 1
         local actualRecordsInBatch = math.floor(#bulkBinary / recordSize)
@@ -130,14 +130,16 @@ function TSTable:queryRange(queryStart, queryEnd, filterZero)
     return records
 end
 
-function TSTable:queryRangeAgg(queryStart, queryEnd, aggInterval, aggs)
+function TSTable:queryRangeAggV1(queryStart, queryEnd, aggInterval, aggs)
     local columnNames = self.config.columnNames
     local records = self:queryRange(queryStart, queryEnd, true)
     local result = {}
-    local lastAggTime
     local aggRecord
+    local lastAggTime
+    local currentAggTime
+
     for _, record in ipairs(records) do
-        local currentAggTime = alignToInterval(record[1], aggInterval)
+        currentAggTime = alignToInterval(record[1], aggInterval)
         if currentAggTime ~= lastAggTime then
             aggRecord = { currentAggTime }
             table.insert(result, aggRecord)
@@ -148,6 +150,65 @@ function TSTable:queryRangeAgg(queryStart, queryEnd, aggInterval, aggs)
             aggRecord[j + 1] = aggItem.aggFunction(aggRecord[j + 1], record[id])
         end
     end
+    return result
+end
+
+function TSTable:queryRangeAggV2(queryStart, queryEnd, aggInterval, aggs)
+    local recordSize = self.config.recordSize
+    local maxRecordsInBatch = math.floor(1048576 / recordSize)
+
+    local interval = self.config.schema[1].interval
+    queryStart = alignToInterval(queryStart, interval)
+    queryEnd = alignToInterval(queryEnd, interval)
+    local actualStart = math.max(queryStart, self.startTime)
+    local actualEnd = math.min(queryEnd, self.endTime)
+    if actualStart > actualEnd then return {} end
+
+    local startIndex = math.floor((actualStart - self.startTime) / interval)
+    local endIndex = math.floor((actualEnd - self.startTime) / interval)
+    local numRecordsRemaining = endIndex - startIndex + 1
+
+    local file = io.open(self.filePath, "rb")
+    if not file then return {} end
+    file:seek("set", startIndex * recordSize)
+
+    local columnNames = self.config.columnNames
+    local result = {}
+    local aggRecord
+    local lastAggTime
+    local currentAggTime
+
+    while numRecordsRemaining > 0 do
+        local recordsToRead = math.min(numRecordsRemaining, maxRecordsInBatch)
+        local batchSize = recordsToRead * recordSize
+        local bulkBinary = file:read(batchSize)
+        if not bulkBinary or #bulkBinary == 0 then
+            break
+        end
+        local currentOffset = 1
+        local actualRecordsInBatch = math.floor(#bulkBinary / recordSize)
+        for i = 1, actualRecordsInBatch do
+            local binaryRecord = bulkBinary:sub(currentOffset, currentOffset + recordSize - 1)
+            local record = TSPacker.unpackRecord(self.config, binaryRecord)
+            if record[1] >= actualStart and record[1] <= actualEnd then
+                if not TSPacker.isZeroRecord(record) then
+                    currentAggTime = alignToInterval(record[1], aggInterval)
+                    if currentAggTime ~= lastAggTime then
+                        aggRecord = { currentAggTime }
+                        table.insert(result, aggRecord)
+                        lastAggTime = currentAggTime
+                    end
+                    for j, aggItem in ipairs(aggs) do
+                        local id = columnNames[aggItem.columnName]
+                        aggRecord[j + 1] = aggItem.aggFunction(aggRecord[j + 1], record[id])
+                    end
+                end
+            end
+            currentOffset = currentOffset + recordSize
+        end
+        numRecordsRemaining = numRecordsRemaining - actualRecordsInBatch
+    end
+    file:close()
     return result
 end
 
