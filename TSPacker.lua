@@ -78,7 +78,7 @@ function M.isZeroRecord(record)
     return true
 end
 
-local function packRecord(schemaConfig, record)
+function M.packRecord(schemaConfig, record)
     for i, col in ipairs(schemaConfig.schema) do
         local rawValue = record[i]
         if rawValue == nil or type(rawValue) ~= 'number' then
@@ -95,6 +95,7 @@ end
 
 function M.unpackRecord(schemaConfig, binaryString)
     local record = { string.unpack(schemaConfig.formatString, binaryString) }
+    record[#record] = nil
     for i, col in ipairs(schemaConfig.schema) do
         if col.type == "timestamp" then
             record[i] = record[i] * col.interval
