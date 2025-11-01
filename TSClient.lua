@@ -69,6 +69,7 @@ local function executeWrite(tsTable, args)
             records[count] = record
             if count % 4000 == 0 then
                 totalResult = totalResult + tsTable:writeRecords(records)
+                count = 0
                 records = {}
             end
         end

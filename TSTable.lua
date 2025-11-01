@@ -14,6 +14,16 @@ local function getFileSize(filePath)
     return size or 0
 end
 
+local function getStartTime(filePath, recordSize, config)
+    local file = io.open(self.filePath, "rb")
+    if not file then error("Failed to open data file for getting startTime.") end
+    file:seek("set", 0)
+    local firstRecordBinary = file:read(recordSize)
+    file:close()
+    local record = TSPacker.unpackRecord(config, firstRecordBinary)
+    return record[1]
+end
+
 local function alignToInterval(ts, interval)
     return math.floor(ts / interval) * interval
 end
@@ -35,16 +45,10 @@ function M.new(schema, filePath, readOnly)
      ::retry::
 
     self.fileSize = getFileSize(self.filePath)
-    local numFullRecords = math.floor(self.fileSize / recordSize)
     if self.fileSize >= recordSize then
-        local file = io.open(self.filePath, "rb")
-        if not file then error("Failed to open data file for getting startTime.") end
-        file:seek("set", 0)
-        local firstRecordBinary = file:read(recordSize)
-        file:close()
-        local record = TSPacker.unpackRecord(self.config, firstRecordBinary)
-        self.startTime = record[1]
+        self.startTime = getStartTime(self.filePath, recordSize, self.config)
     end
+    local numFullRecords = math.floor(self.fileSize / recordSize)
 
     if not readOnly then
         if self.fileSize == 0 then
@@ -52,8 +56,7 @@ function M.new(schema, filePath, readOnly)
         elseif self.fileSize > 0 and self.fileSize < recordSize then
             error("Invalid Data File : " .. self.filePath)
         else
-            local remainder = self.fileSize % recordSize
-            if remainder > 0 then
+            if self.fileSize % recordSize > 0 then
                 local file = io.open(self.filePath, "r+b")
                 if not file then
                     error(string.format("Failed to open data file for fixing (remainder > 0): %s", self.filePath))
@@ -62,8 +65,7 @@ function M.new(schema, filePath, readOnly)
                 file:seek("set", seekOffset)
                 local nextRecordTime = self.startTime + numFullRecords * interval
                 local zeroRecord = TSPacker.createZeroRecord(self.config, nextRecordTime)
-                local packedZeroRecord = TSPacker.packRecord(self.config, zeroRecord)
-                file:write(packedZeroRecord)
+                file:write(TSPacker.packRecord(self.config, zeroRecord))
                 file:flush()
                 file:close()
                 goto retry
@@ -137,8 +139,8 @@ function TSTable:queryRange(queryStart, queryEnd, filterZero)
 end
 
 function TSTable:queryRangeAggV1(queryStart, queryEnd, aggInterval, aggs)
-    local columnNames = self.config.columnNames
     local records = self:queryRange(queryStart, queryEnd, true)
+    local columnNames = self.config.columnNames
     local result = {}
     local count = 0
     local aggRecord
@@ -235,8 +237,7 @@ function TSTable:writeRecords(recordsArray)
     local packedBatchSize = 0
 
     for i, record in ipairs(recordsArray) do
-        record[1] = alignToInterval(record[1], interval)
-        local recordTime = record[1]
+        local recordTime = alignToInterval(record[1], interval)
         if recordTime < lastRecordTime then
             goto continue
         else
@@ -244,9 +245,8 @@ function TSTable:writeRecords(recordsArray)
                 local gapCount = math.floor((recordTime - lastRecordTime) / interval) - 1
                 for i = 1, gapCount do
                     local zeroRecord = TSPacker.createZeroRecord(self.config, lastRecordTime + interval)
-                    local packedZeroRecord = TSPacker.packRecord(self.config, zeroRecord)
                     packedBatchSize = packedBatchSize + 1
-                    packedBatch[packedBatchSize] = packedZeroRecord
+                    packedBatch[packedBatchSize] = TSPacker.packRecord(self.config, zeroRecord)
                     lastRecordTime = lastRecordTime + interval
                     if(not firstWriteRecordTime) then
                         firstWriteRecordTime = lastRecordTime
