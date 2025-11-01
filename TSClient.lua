@@ -73,7 +73,7 @@ local function executeWrite(tsTable, args)
                 records = {}
             end
         end
-        return totalResult + tsTable:writeRecords(records)
+        print(totalResult + tsTable:writeRecords(records))
     end
 end
 

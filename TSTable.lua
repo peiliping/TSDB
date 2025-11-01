@@ -15,7 +15,7 @@ local function getFileSize(filePath)
 end
 
 local function getStartTime(filePath, recordSize, config)
-    local file = io.open(self.filePath, "rb")
+    local file = io.open(filePath, "rb")
     if not file then error("Failed to open data file for getting startTime.") end
     file:seek("set", 0)
     local firstRecordBinary = file:read(recordSize)
@@ -240,7 +240,13 @@ function TSTable:writeRecords(recordsArray)
         local recordTime = alignToInterval(record[1], interval)
         if recordTime < lastRecordTime then
             goto continue
-        else
+        elseif recordTime == lastRecordTime then
+            if not firstWriteRecordTime then
+                firstWriteRecordTime = recordTime
+                packedBatchSize = packedBatchSize + 1
+            end
+            packedBatch[packedBatchSize] = TSPacker.packRecord(self.config, record)
+        else 
             if lastRecordTime > 0 and recordTime > lastRecordTime + interval then
                 local gapCount = math.floor((recordTime - lastRecordTime) / interval) - 1
                 for i = 1, gapCount do
@@ -271,8 +277,10 @@ function TSTable:writeRecords(recordsArray)
         end
         if firstWriteRecordTime == self.endTime then
             file:seek("set", self.fileSize - self.config.recordSize)
+            self.fileSize = self.fileSize + (packedBatchSize - 1) * self.config.recordSize
         elseif firstWriteRecordTime > self.endTime then
             file:seek("set", self.fileSize)
+            self.fileSize = self.fileSize + packedBatchSize * self.config.recordSize
         end
         file:write(table.concat(packedBatch))
         file:flush()
@@ -281,7 +289,6 @@ function TSTable:writeRecords(recordsArray)
             self.startTime = firstWriteRecordTime
         end
         self.endTime = lastRecordTime
-        self.fileSize = self.fileSize + packedBatchSize * self.config.recordSize
     end
     return packedBatchSize
 end
