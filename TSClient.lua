@@ -6,11 +6,9 @@ local AggFunctions = require("AggFunctions")
 local TSDB = require("TSDatabase")
 
 local function executeQuery(tsTable, startTs, endTs, filterZero)
-    local results = tsTable:queryRange(startTs, endTs, filterZero)
-    if #results > 0 then
-        for _, record in ipairs(results) do
-            print(table.concat(record, " "))
-        end
+    local records = tsTable:queryRange(startTs, endTs, filterZero)
+    for _, record in ipairs(records) do
+        print(table.concat(record, " "))
     end
 end
 
@@ -22,13 +20,17 @@ local function executeAgg(tsTable, startTs, endTs, newInterval, args)
         if not columnNames[aggItem.columnName] then
             error(string.format("Column name '%s' not found in schema for this table.", aggItem.columnName))
         end
-        table.insert(aggs , aggItem)
+        aggs[idx - 5] = aggItem
     end
-    local results = tsTable:queryRangeAggV2(startTs, endTs, newInterval, aggs)
-    if #results > 0 then
-        for _, record in ipairs(results) do
-            print(table.concat(record, " "))
-        end
+    local records
+    local estimatedRows = math.floor((endTs - startTs) / tsTable.config.schema[1].interval)
+    if estimatedRows <= 1024 then
+        records = tsTable:queryRangeAggV1(startTs, endTs, newInterval, aggs)
+    else
+        records = tsTable:queryRangeAggV2(startTs, endTs, newInterval, aggs)
+    end
+    for _, record in ipairs(records) do
+        print(table.concat(record, " "))
     end
 end
 
@@ -39,37 +41,37 @@ local function executeWrite(tsTable, args)
     local records = {}
 
     if argSize == 0 then
+        local count = 0
         for line in io.stdin:lines() do
-            if #line <= 1024 then
-                local record = {}
-                for value in string.gmatch(line, "[^%s]+") do
-                    table.insert(record, tonumber(value))
-                end
-                if #record == schemaSize then
-                    table.insert(records, record)
-                else
-                    error("Stdin Datas Incomplete.")
-                end
-            else
-                error("Stdin Line Data Too Much.")
+            if #line > 1024 then error("Stdin Line Data Too Long.") end
+            local record = {}
+            local valueCount = 0
+            for value in string.gmatch(line, "[^%s]+") do
+                valueCount = valueCount + 1
+                record[valueCount] = tonumber(value)
             end
+            if valueCount ~= schemaSize then
+                error("Stdin Datas Incomplete.")
+            end
+            count = count + 1
+            records[count] = record
         end
+        print(tsTable:writeRecords(records))
     else
-        if argSize % schemaSize == 0 then
-            local numRecords = argSize / schemaSize
-            for idx = 1, numRecords do
-                local record = {}
-                for i, col in ipairs(schema) do
-                    local value = args[2 + i + (idx - 1) * schemaSize]
-                    table.insert(record, tonumber(value))
-                end
-                table.insert(records, record)
+        local numRecords = argSize / schemaSize
+        local remainder = argSize % schemaSize
+        if numRecords > 10 then error("Args Datas Too Many.")   end
+        if remainder  >   0 then error("Args Datas Incomplete.") end
+        for idx = 1, numRecords do
+            local record = {}
+            for i, col in ipairs(schema) do
+                local id = 2 + i + (idx - 1) * schemaSize
+                record[i] = tonumber(args[id])
             end
-        else
-            error("Args Datas Incomplete.")
+            records[idx] = record
         end
+        print(tsTable:writeRecords(records))
     end
-    print(tsTable:writeRecords(records))
 end
 
 local function checkArg(key, value)
@@ -80,8 +82,7 @@ local function checkArg(key, value)
 end
 
 local function main(args)
-    local cmd = args[1]
-    if not cmd then error("CMD is missing.") end
+    local cmd = checkArg("CMD", args[1])
     local tableName = args[2]
 
     if cmd == "stat" then

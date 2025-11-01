@@ -63,8 +63,7 @@ function M.createZeroRecord(schemaConfig, timeValue)
         if col.name == "time" then
             zeroRecord[i] = timeValue
         else
-            local typeConfig = TYPE_CONFIGS[col.type]
-            zeroRecord[i] = typeConfig.defaultValue
+            zeroRecord[i] = TYPE_CONFIGS[col.type].defaultValue
         end
     end
     return zeroRecord
@@ -79,53 +78,33 @@ function M.isZeroRecord(record)
     return true
 end
 
-local function packRecord(schemaConfig, data, extractFunction)
-    local valuesToPack = {}
+local function packRecord(schemaConfig, record)
     for i, col in ipairs(schemaConfig.schema) do
-        local rawValue = extractFunction(i, data, col)
+        local rawValue = record[i]
         if rawValue == nil or type(rawValue) ~= 'number' then
             error(string.format("Column %d ('%s'): Data is missing, nil, or not a number during packing.", i, col.name))
         end
-        local packedValue
         if col.type == "timestamp" then
-            packedValue = math.floor(rawValue / col.interval)
+            record[i] = math.floor(rawValue / col.interval)
         else
-            packedValue = math.floor(rawValue * col.scale + 0.5)
+            record[i] = math.floor(rawValue * col.scale + 0.5)
         end
-        table.insert(valuesToPack, packedValue)
     end
-    return string.pack(schemaConfig.formatString, table.unpack(valuesToPack)) 
-end
-
-function M.packRecordFromMap(schemaConfig, dataMap)
-    return packRecord(schemaConfig, dataMap, function(index, data, col) 
-        return data[col.name] 
-    end)
-end
-
-function M.packRecordFromArray(schemaConfig, dataArray)
-    return packRecord(schemaConfig, dataArray, function(index, data, col) 
-        return data[index] 
-    end)
+    return string.pack(schemaConfig.formatString, table.unpack(record)) 
 end
 
 function M.unpackRecord(schemaConfig, binaryString)
-    local unpackedValues = { string.unpack(schemaConfig.formatString, binaryString) }
-    local result = {}
+    local record = { string.unpack(schemaConfig.formatString, binaryString) }
     for i, col in ipairs(schemaConfig.schema) do
-        local originalValue
         if col.type == "timestamp" then
-            originalValue = unpackedValues[i] * col.interval
+            record[i] = record[i] * col.interval
         else
-            if col.scale == 1 then
-                originalValue = unpackedValues[i]
-            else
-                originalValue = unpackedValues[i] / col.scale
+            if col.scale ~= 1 then
+                record[i] = record[i] / col.scale
             end
         end
-        table.insert(result, originalValue)
     end
-    return result
+    return record
 end
 
 return M

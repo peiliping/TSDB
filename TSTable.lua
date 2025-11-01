@@ -43,7 +43,7 @@ function M.new(schema, filePath, readOnly)
                 error(string.format("Failed to create and initialize data file: %s", self.filePath))
             end
             local zeroRecord = TSPacker.createZeroRecord(self.config, self.startTime)
-            local packedZeroRecord = TSPacker.packRecordFromArray(self.config, zeroRecord)
+            local packedZeroRecord = TSPacker.packRecord(self.config, zeroRecord)
             file:write(packedZeroRecord)
             file:flush()
             file:close()
@@ -59,7 +59,7 @@ function M.new(schema, filePath, readOnly)
                 file:seek("set", seekOffset)
                 local nextRecordTime = self.startTime + numFullRecords * interval
                 local zeroRecord = TSPacker.createZeroRecord(self.config, nextRecordTime)
-                local packedZeroRecord = TSPacker.packRecordFromArray(self.config, zeroRecord)
+                local packedZeroRecord = TSPacker.packRecord(self.config, zeroRecord)
                 file:write(packedZeroRecord)
                 file:flush()
                 file:close()
@@ -105,6 +105,7 @@ function TSTable:queryRange(queryStart, queryEnd, filterZero)
     file:seek("set", startIndex * recordSize)
 
     local records = {}
+    local count = 0
     while numRecordsRemaining > 0 do
         local recordsToRead = math.min(numRecordsRemaining, maxRecordsInBatch)
         local batchSize = recordsToRead * recordSize
@@ -119,7 +120,8 @@ function TSTable:queryRange(queryStart, queryEnd, filterZero)
             local record = TSPacker.unpackRecord(self.config, binaryRecord)
             if record[1] >= actualStart and record[1] <= actualEnd then
                 if not filterZero or not TSPacker.isZeroRecord(record) then
-                    table.insert(records, record)
+                    count = count + 1
+                    records[count] = record
                 end
             end
             currentOffset = currentOffset + recordSize
@@ -134,6 +136,7 @@ function TSTable:queryRangeAggV1(queryStart, queryEnd, aggInterval, aggs)
     local columnNames = self.config.columnNames
     local records = self:queryRange(queryStart, queryEnd, true)
     local result = {}
+    local count = 0
     local aggRecord
     local lastAggTime
     local currentAggTime
@@ -142,7 +145,8 @@ function TSTable:queryRangeAggV1(queryStart, queryEnd, aggInterval, aggs)
         currentAggTime = alignToInterval(record[1], aggInterval)
         if currentAggTime ~= lastAggTime then
             aggRecord = { currentAggTime }
-            table.insert(result, aggRecord)
+            count = count + 1
+            result[count] = aggRecord
             lastAggTime = currentAggTime
         end
         for j, aggItem in ipairs(aggs) do
@@ -174,6 +178,7 @@ function TSTable:queryRangeAggV2(queryStart, queryEnd, aggInterval, aggs)
 
     local columnNames = self.config.columnNames
     local result = {}
+    local count = 0
     local aggRecord
     local lastAggTime
     local currentAggTime
@@ -195,7 +200,8 @@ function TSTable:queryRangeAggV2(queryStart, queryEnd, aggInterval, aggs)
                     currentAggTime = alignToInterval(record[1], aggInterval)
                     if currentAggTime ~= lastAggTime then
                         aggRecord = { currentAggTime }
-                        table.insert(result, aggRecord)
+                        count = count + 1
+                        result[count] = aggRecord
                         lastAggTime = currentAggTime
                     end
                     for j, aggItem in ipairs(aggs) do
@@ -221,6 +227,7 @@ function TSTable:writeRecords(recordsArray)
     local lastRecordTime = self.endTime
     local firstWriteRecordTime = nil
     local packedBatch = {}
+    local packedBatchSize = 0
 
     for i, record in ipairs(recordsArray) do
         record[1] = alignToInterval(record[1], interval)
@@ -232,16 +239,17 @@ function TSTable:writeRecords(recordsArray)
                 local gapCount = math.floor((recordTime - lastRecordTime) / interval) - 1
                 for i = 1, gapCount do
                     local zeroRecord = TSPacker.createZeroRecord(self.config, lastRecordTime + interval)
-                    local packedZeroRecord = TSPacker.packRecordFromArray(self.config, zeroRecord)
-                    table.insert(packedBatch, packedZeroRecord)
+                    local packedZeroRecord = TSPacker.packRecord(self.config, zeroRecord)
+                    packedBatchSize = packedBatchSize + 1
+                    packedBatch[packedBatchSize] = packedZeroRecord
                     lastRecordTime = lastRecordTime + interval
                     if(not firstWriteRecordTime) then
                         firstWriteRecordTime = lastRecordTime
                     end
                 end
             end
-            local packedRecord = TSPacker.packRecordFromArray(self.config, record)
-            table.insert(packedBatch, packedRecord)
+            packedBatchSize = packedBatchSize + 1
+            packedBatch[packedBatchSize] = TSPacker.packRecord(self.config, record)
             lastRecordTime = recordTime
             if not firstWriteRecordTime then
                 firstWriteRecordTime = recordTime
@@ -251,8 +259,7 @@ function TSTable:writeRecords(recordsArray)
         ::continue::
     end
 
-    local batchSize = #packedBatch
-    if batchSize > 0 then
+    if packedBatchSize > 0 then
         local file = io.open(self.filePath, "r+b")
         if not file then
             error(string.format("Failed to open data file for writing: %s", self.filePath))
@@ -267,7 +274,7 @@ function TSTable:writeRecords(recordsArray)
         file:close()
         self.endTime = lastRecordTime
     end
-    return batchSize
+    return packedBatchSize
 end
 
 return M
