@@ -3,7 +3,7 @@ local M = {}
 local function create_kline_schema(interval_sec, startTime_sec)
     
     local kline_base_schema = {
-        { name = "time", type = "timestamp", interval = interval_sec, startTime = startTime_sec },
+        { name = "time", type = "timestamp", interval = interval_sec},
         -- K线价格数据
         { name = "open", type = "number", precision = 2, signed = false },
         { name = "high", type = "number", precision = 2, signed = false },
@@ -22,10 +22,10 @@ local function create_kline_schema(interval_sec, startTime_sec)
     return { schema = kline_base_schema }
 end
 
-M.BTCUSDT_5MIN  = create_kline_schema(300,   1725120000)
-M.BTCUSDT_15MIN = create_kline_schema(900,   1725120000)
-M.BTCUSDT_30MIN = create_kline_schema(1800,  1725120000)
-M.BTCUSDT_1H    = create_kline_schema(3600,  1725120000)
-M.BTCUSDT_4H    = create_kline_schema(14400, 1725120000)
+M.BTCUSDT_5MIN  = create_kline_schema(300)
+M.BTCUSDT_15MIN = create_kline_schema(900)
+M.BTCUSDT_30MIN = create_kline_schema(1800)
+M.BTCUSDT_1H    = create_kline_schema(3600)
+M.BTCUSDT_4H    = create_kline_schema(14400)
 
 return M

@@ -25,12 +25,6 @@ function M.calculateSchema(schema)
             if not col.interval or col.interval <= 0 then
                 error(string.format("Column %d ('time'): 'interval' must be a positive number.", i))
             end
-            if not col.startTime or col.startTime <= 0 then
-                error(string.format("Column %d ('time'): 'startTime' must be a positive number.", i))
-            end
-            if col.startTime ~= math.floor(col.startTime / col.interval) * col.interval then
-                 error(string.format("Column %d ('time'): 'startTime' (%s) must be aligned with (a multiple of) 'interval' (%s).", i, col.startTime, col.interval))
-            end
             col.precision = 0
             col.signed = false
         end

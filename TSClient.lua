@@ -38,11 +38,18 @@ local function executeWrite(tsTable, args)
     local schema = tsTable.config.schema
     local schemaSize = #schema
     local argSize = #args - 2
-    local records = {}
-
-    if argSize == 0 then
+    if argSize > 0 then
+        if argSize ~= schemaSize then error("Args Datas Not Match SchemaSize.")   end
+        local record = {}
+        for i = 1, schemaSize do
+            record[i] = tonumber(args[2 + i])
+        end
+        print(tsTable:writeRecords({ record }))
+    else
+        local records = {}
         local count = 0
-        for line in io.stdin:lines() do
+        local totalResult = 0
+        for line in io.stdin:read('*l') do
             if #line > 1024 then error("Stdin Line Data Too Long.") end
             local record = {}
             local valueCount = 0
@@ -55,22 +62,12 @@ local function executeWrite(tsTable, args)
             end
             count = count + 1
             records[count] = record
-        end
-        print(tsTable:writeRecords(records))
-    else
-        local numRecords = argSize / schemaSize
-        local remainder = argSize % schemaSize
-        if numRecords > 10 then error("Args Datas Too Many.")   end
-        if remainder  >   0 then error("Args Datas Incomplete.") end
-        for idx = 1, numRecords do
-            local record = {}
-            for i, col in ipairs(schema) do
-                local id = 2 + i + (idx - 1) * schemaSize
-                record[i] = tonumber(args[id])
+            if count % 4000 == 0 then
+                totalResult = totalResult + tsTable:writeRecords(records)
+                records = {}
             end
-            records[idx] = record
         end
-        print(tsTable:writeRecords(records))
+        return totalResult + tsTable:writeRecords(records)
     end
 end
 
@@ -117,6 +114,7 @@ local function main(args)
         local st = checkArg("startTime", tonumber(args[3]))
         local et = checkArg("endTime", tonumber(args[4]))
         local nitvl = checkArg("newInterval", tonumber(args[5]))
+        checkArg("aggItem", args[6])
         local db = TSDB.new(DATA_PATH, tableName, true)
         local tsTable = db:getTable(tableName)
         executeAgg(tsTable, st, et, nitvl, args)

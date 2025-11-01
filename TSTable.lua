@@ -28,7 +28,6 @@ function M.new(schema, filePath, readOnly)
         readOnly = readOnly,
     }
 
-    self.startTime = self.config.schema[1].startTime
     local interval = self.config.schema[1].interval
     local recordSize = self.config.recordSize
 
@@ -38,17 +37,18 @@ function M.new(schema, filePath, readOnly)
     local numFullRecords = math.floor(self.fileSize / recordSize)
     if not readOnly then
         if self.fileSize == 0 then
-            local file = io.open(self.filePath, "wb")
-            if not file then
-                error(string.format("Failed to create and initialize data file: %s", self.filePath))
-            end
-            local zeroRecord = TSPacker.createZeroRecord(self.config, self.startTime)
-            local packedZeroRecord = TSPacker.packRecord(self.config, zeroRecord)
-            file:write(packedZeroRecord)
-            file:flush()
-            file:close()
-            goto retry
+            -- nothing
+        elseif self.fileSize > 0 and self.fileSize < recordSize then
+            error("Invalid Data File : " .. self.filePath)
         else
+            local file = io.open(self.filePath, "rb")
+            if not file then error("Failed to open data file for getting startTime.") end
+            file:seek("set", 0)
+            local firstRecordBinary = file:read(recordSize)
+            file:close()
+            local record = TSPacker.unpackRecord(self.config, firstRecordBinary)
+            self.startTime = record[1]
+
             local remainder = self.fileSize % recordSize
             if remainder > 0 then
                 local file = io.open(self.filePath, "r+b")
@@ -235,7 +235,7 @@ function TSTable:writeRecords(recordsArray)
         if recordTime < lastRecordTime then
             goto continue
         else
-            if recordTime > lastRecordTime + interval then
+            if lastRecordTime > 0 and recordTime > lastRecordTime + interval then
                 local gapCount = math.floor((recordTime - lastRecordTime) / interval) - 1
                 for i = 1, gapCount do
                     local zeroRecord = TSPacker.createZeroRecord(self.config, lastRecordTime + interval)
@@ -260,7 +260,12 @@ function TSTable:writeRecords(recordsArray)
     end
 
     if packedBatchSize > 0 then
-        local file = io.open(self.filePath, "r+b")
+        local file
+        if self.endTime == 0 then
+            file = io.open(self.filePath, "wb")
+        else
+            file = io.open(self.filePath, "r+b")
+        end
         if not file then
             error(string.format("Failed to open data file for writing: %s", self.filePath))
         end
@@ -272,7 +277,11 @@ function TSTable:writeRecords(recordsArray)
         file:write(table.concat(packedBatch))
         file:flush()
         file:close()
+        if self.startTime == 0 then
+            self.startTime = firstWriteRecordTime
+        end
         self.endTime = lastRecordTime
+        self.fileSize = self.fileSize + packedBatchSize * self.config.recordSize
     end
     return packedBatchSize
 end
