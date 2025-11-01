@@ -6,8 +6,9 @@ local TSTable = {}
 TSTable.__index = TSTable
 
 local function getFileSize(filePath)
-    local file = io.open(filePath, "rb")
-    if not file then return 0 end
+    local file, err = io.open(filePath, "rb")
+    if err then error("Read File Error : " .. err) end
+    if not file then error(filePath .. " is nil") end
     local size = file:seek("end")
     file:close() 
     return size or 0
@@ -35,20 +36,22 @@ function M.new(schema, filePath, readOnly)
 
     self.fileSize = getFileSize(self.filePath)
     local numFullRecords = math.floor(self.fileSize / recordSize)
+    if self.fileSize >= recordSize then
+        local file = io.open(self.filePath, "rb")
+        if not file then error("Failed to open data file for getting startTime.") end
+        file:seek("set", 0)
+        local firstRecordBinary = file:read(recordSize)
+        file:close()
+        local record = TSPacker.unpackRecord(self.config, firstRecordBinary)
+        self.startTime = record[1]
+    end
+
     if not readOnly then
         if self.fileSize == 0 then
             -- nothing
         elseif self.fileSize > 0 and self.fileSize < recordSize then
             error("Invalid Data File : " .. self.filePath)
         else
-            local file = io.open(self.filePath, "rb")
-            if not file then error("Failed to open data file for getting startTime.") end
-            file:seek("set", 0)
-            local firstRecordBinary = file:read(recordSize)
-            file:close()
-            local record = TSPacker.unpackRecord(self.config, firstRecordBinary)
-            self.startTime = record[1]
-
             local remainder = self.fileSize % recordSize
             if remainder > 0 then
                 local file = io.open(self.filePath, "r+b")
@@ -86,6 +89,7 @@ function TSTable:getStat()
 end
 
 function TSTable:queryRange(queryStart, queryEnd, filterZero)
+    if self.fileSize == 0 then return {} end
     local recordSize = self.config.recordSize
     local maxRecordsInBatch = math.floor(1048576 / recordSize)
 
@@ -158,6 +162,7 @@ function TSTable:queryRangeAggV1(queryStart, queryEnd, aggInterval, aggs)
 end
 
 function TSTable:queryRangeAggV2(queryStart, queryEnd, aggInterval, aggs)
+    if self.fileSize == 0 then return {} end
     local recordSize = self.config.recordSize
     local maxRecordsInBatch = math.floor(1048576 / recordSize)
 
@@ -260,12 +265,7 @@ function TSTable:writeRecords(recordsArray)
     end
 
     if packedBatchSize > 0 then
-        local file
-        if self.endTime == 0 then
-            file = io.open(self.filePath, "wb")
-        else
-            file = io.open(self.filePath, "r+b")
-        end
+        local file = io.open(self.filePath, "r+b")
         if not file then
             error(string.format("Failed to open data file for writing: %s", self.filePath))
         end

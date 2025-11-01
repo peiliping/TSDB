@@ -1,11 +1,11 @@
 local M = {}
 
 local TYPE_CONFIGS = {
-    timestamp   = { size=4, maxPrecision=0,  defaultValue=0, formatUnsigned="<I4", formatSigned="<i4" },
-    shortnumber = { size=2, maxPrecision=15, defaultValue=0, formatUnsigned="<I2", formatSigned="<i2" },
-    number      = { size=4, maxPrecision=15, defaultValue=0, formatUnsigned="<I4", formatSigned="<i4" },
-    bignumber   = { size=6, maxPrecision=15, defaultValue=0, formatUnsigned="<I6", formatSigned="<i6" },
-    hugenumber  = { size=8, maxPrecision=15, defaultValue=0, formatUnsigned="<I8", formatSigned="<i8" },
+    timestamp   = { size = 4, maxPrecision = 0,  formatUnsigned = "<I4", formatSigned = "<i4" },
+    shortnumber = { size = 2, maxPrecision = 15, formatUnsigned = "<I2", formatSigned = "<i2" },
+    number      = { size = 4, maxPrecision = 15, formatUnsigned = "<I4", formatSigned = "<i4" },
+    bignumber   = { size = 6, maxPrecision = 15, formatUnsigned = "<I6", formatSigned = "<i6" },
+    hugenumber  = { size = 8, maxPrecision = 15, formatUnsigned = "<I8", formatSigned = "<i8" },
 }
 
 function M.calculateSchema(schema)
@@ -57,7 +57,7 @@ function M.createZeroRecord(schemaConfig, timeValue)
         if col.name == "time" then
             zeroRecord[i] = timeValue
         else
-            zeroRecord[i] = TYPE_CONFIGS[col.type].defaultValue
+            zeroRecord[i] = 0
         end
     end
     return zeroRecord

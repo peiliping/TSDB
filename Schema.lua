@@ -23,9 +23,9 @@ local function create_kline_schema(interval_sec, startTime_sec)
 end
 
 M.BTCUSDT_5MIN  = create_kline_schema(300)
-M.BTCUSDT_15MIN = create_kline_schema(900)
-M.BTCUSDT_30MIN = create_kline_schema(1800)
-M.BTCUSDT_1H    = create_kline_schema(3600)
-M.BTCUSDT_4H    = create_kline_schema(14400)
+--M.BTCUSDT_15MIN = create_kline_schema(900)
+--M.BTCUSDT_30MIN = create_kline_schema(1800)
+--M.BTCUSDT_1H    = create_kline_schema(3600)
+--M.BTCUSDT_4H    = create_kline_schema(14400)
 
 return M

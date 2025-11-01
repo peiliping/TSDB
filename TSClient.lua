@@ -49,7 +49,12 @@ local function executeWrite(tsTable, args)
         local records = {}
         local count = 0
         local totalResult = 0
-        for line in io.stdin:read('*l') do
+
+        while true do
+            local line = io.stdin:read('*l')
+            if line == nil then
+                break
+            end
             if #line > 1024 then error("Stdin Line Data Too Long.") end
             local record = {}
             local valueCount = 0
@@ -95,20 +100,14 @@ local function main(args)
                 print(string.format(formatStr, key, value))
             end
         end
-    elseif cmd == "cat" then
-        checkArg("tablenName", tableName)
-        local st = checkArg("startTime", tonumber(args[3]))
-        local et = checkArg("endTime", tonumber(args[4]))
-        local db = TSDB.new(DATA_PATH, tableName, true)
-        local tsTable = db:getTable(tableName)
-        executeQuery(tsTable, st, et, false)
     elseif cmd == "read" then
         checkArg("tablenName", tableName)
         local st = checkArg("startTime", tonumber(args[3]))
         local et = checkArg("endTime", tonumber(args[4]))
+        local filterZero = (args[5] and args[5]=="true" or false)
         local db = TSDB.new(DATA_PATH, tableName, true)
         local tsTable = db:getTable(tableName)
-        executeQuery(tsTable, st, et, true)
+        executeQuery(tsTable, st, et, filterZero)
     elseif cmd == "agg" then
         checkArg("tablenName", tableName)
         local st = checkArg("startTime", tonumber(args[3]))
