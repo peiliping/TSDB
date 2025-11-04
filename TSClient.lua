@@ -12,24 +12,26 @@ local function executeQuery(tsTable, startTs, endTs, filterZero)
     end
 end
 
-local function executeAgg(tsTable, startTs, endTs, newInterval, exps)
-    local aggs = AggFunctions.parserExpr(tsTable.schema, exps)
-    local records
-    local estimatedRows = math.floor((endTs - startTs) / tsTable.interval)
-    if estimatedRows <= 1024 then
-        records = tsTable:queryRangeAggV1(startTs, endTs, newInterval, aggs)
-    else
-        records = tsTable:queryRangeAggV2(startTs, endTs, newInterval, aggs)
-    end
+local function executeRollup(srcTable, destTable, startTs, endTs)    
+    local aggs = AggFunctions.parserExpr(srcTable.schema, srcTable.schema.rollup) 
+    local records = srcTable:queryAggTumbling(startTs, endTs, destTable.interval, aggs)
+    print(destTable:writeRecords(records))
+end
+
+local function executeAggTumbling(tsTable, startTs, endTs, newInterval, expr)
+    local aggs = AggFunctions.parserExpr(tsTable.schema, expr)
+    local records = tsTable:queryAggTumbling(startTs, endTs, newInterval, aggs)
     for _, record in ipairs(records) do
         print(table.concat(record, " "))
     end
 end
 
-local function executeRollup(srcTable, destTable, startTs, endTs)    
-    local aggs = AggFunctions.parserExpr(srcTable.schema) 
-    local records = srcTable:queryRangeAggV2(startTs, endTs, destTable.interval, aggs)
-    print(destTable:writeRecords(records))
+local function executeAggSliding(tsTable, startTs, endTs, windowSize, expr)
+    local aggs = AggFunctions.parserExpr(tsTable.schema, expr)
+    local records = tsTable:queryAggSliding(startTs, endTs, windowSize, aggs)
+    for _, record in ipairs(records) do
+        print(table.concat(record, " "))
+    end
 end
 
 local function executeWrite(tsTable, args)
@@ -104,15 +106,6 @@ local function main(args)
         local db = TSDB.new(DATA_PATH, tb, true)
         local tsTable = db:getTable(tb)
         executeQuery(tsTable, st, et, filterZero)
-    elseif cmd == "agg" then
-        local tb = checkArg("tablenName", args[2])
-        local st = checkArg("startTime", tonumber(args[3]))
-        local et = checkArg("endTime", tonumber(args[4]))
-        local nitvl = checkArg("newInterval", tonumber(args[5]))
-        local exps = checkArg("aggItem", args[6])
-        local db = TSDB.new(DATA_PATH, tb, true)
-        local tsTable = db:getTable(tb)
-        executeAgg(tsTable, st, et, nitvl, exps)
     elseif cmd == "write" then
         local tb = checkArg("tablenName", args[2])
         local db = TSDB.new(DATA_PATH, tb, false)
@@ -128,12 +121,26 @@ local function main(args)
         local st = checkArg("startTime", tonumber(args[4]))
         local et = checkArg("endTime", tonumber(args[5]))
         executeRollup(srcTable, destTable, st, et)
+    elseif cmd == "agg" then
+        local tb = checkArg("tablenName", args[2])
+        local st = checkArg("startTime", tonumber(args[3]))
+        local et = checkArg("endTime", tonumber(args[4]))
+        local num = checkArg("number", tonumber(args[5]))
+        local expr = checkArg("expr", args[6])
+        local mode = checkArg("mode",args[7])
+        local db = TSDB.new(DATA_PATH, tb, true)
+        local tsTable = db:getTable(tb)
+        if mode == "Tumbling" then
+            executeAggTumbling(tsTable, st, et, num, expr, mode)
+        elseif mode == "Sliding" then
+            executeAggSliding(tsTable, st, et, num, expr, mode)
+        end
     else
         print("  lua TSClient.lua stat [<table_name>]")
-        print("  lua TSClient.lua read <table_name> <start_ts> <end_ts> [filterZero=true]")
-        print("  lua TSClient.lua agg <table_name> <start_ts> <end_ts> <new_interval> \"<agg_exps>\"")
-        print("  lua TSClient.lua write <table_name> [<data...>] (data from args or stdin)")
+        print("  lua TSClient.lua read <table_name> <start_ts> <end_ts> [filter_zero]")
+        print("  lua TSClient.lua write <table_name> [<data...>]")
         print("  lua TSClient.lua rollup <source_table> <dest_table> <start_ts> <end_ts>")
+        print("  lua TSClient.lua agg <table_name> <start_ts> <end_ts> <number> <agg_expr> <mode>")
     end
 end
 

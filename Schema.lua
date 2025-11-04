@@ -20,14 +20,14 @@ local function create_kline_schema(interval_sec)
         { name = "open_interest", type = "number", precision = 3, signed = false },
     }
     return { columns = kline_base_columns,
-             aggExpr = "first(open),max(high),min(low),last(close),sum(volume),sum(quote_volume),sum(taker_buy_volume),sum(taker_buy_quote_volume),sum(count),last(long_short_delta),last(open_interest)"
+             rollup = "first(open),max(high),min(low),last(close),sum(volume),sum(quote_volume),sum(taker_buy_volume),sum(taker_buy_quote_volume),sum(count),last(long_short_delta),last(open_interest)"
             }
 end
 
 M.BTCUSDT_5MIN  = create_kline_schema(300)
---M.BTCUSDT_15MIN = create_kline_schema(900)
---M.BTCUSDT_30MIN = create_kline_schema(1800)
---M.BTCUSDT_1H    = create_kline_schema(3600)
+M.BTCUSDT_15MIN = create_kline_schema(900)
+M.BTCUSDT_30MIN = create_kline_schema(1800)
+M.BTCUSDT_1H    = create_kline_schema(3600)
 M.BTCUSDT_4H    = create_kline_schema(14400)
 
 return M

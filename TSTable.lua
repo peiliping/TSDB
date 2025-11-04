@@ -1,6 +1,7 @@
 local M = {}
 
 local TSPacker = require("TSPacker")
+local RingBuffer = require("RingBuffer")
 
 local TSTable = {}
 TSTable.__index = TSTable
@@ -133,32 +134,7 @@ function TSTable:queryRange(queryStart, queryEnd, filterZero)
     return records
 end
 
-function TSTable:queryRangeAggV1(queryStart, queryEnd, aggInterval, aggs)
-    local records = self:queryRange(queryStart, queryEnd, true)
-    local columnNames = self.schema.columnNames
-    local result = {}
-    local count = 0
-    local aggRecord
-    local lastAggTime
-    local currentAggTime
-
-    for _, record in ipairs(records) do
-        currentAggTime = alignToInterval(record[1], aggInterval)
-        if currentAggTime ~= lastAggTime then
-            aggRecord = { currentAggTime }
-            count = count + 1
-            result[count] = aggRecord
-            lastAggTime = currentAggTime
-        end
-        for j, aggItem in ipairs(aggs) do
-            local id = columnNames[aggItem.columnName]
-            aggRecord[j + 1] = aggItem.aggFunction(aggRecord[j + 1], record[id])
-        end
-    end
-    return result
-end
-
-function TSTable:queryRangeAggV2(queryStart, queryEnd, aggInterval, aggs)
+function TSTable:queryAggTumbling(queryStart, queryEnd, aggInterval, aggs)
     if self.fileSize == 0 then return {} end
     local recordSize = self.schema.recordSize
     local maxRecordsInBatch = math.floor(1048576 / recordSize)
@@ -179,8 +155,7 @@ function TSTable:queryRangeAggV2(queryStart, queryEnd, aggInterval, aggs)
     if not file then return {} end
     file:seek("set", startIndex * recordSize)
 
-    local columnNames = self.schema.columnNames
-    local result = {}
+    local records = {}
     local count = 0
     local aggRecord
     local lastAggTime
@@ -201,14 +176,13 @@ function TSTable:queryRangeAggV2(queryStart, queryEnd, aggInterval, aggs)
                 local record = TSPacker.unpackRecord(self.schema, binaryRecord)
                 currentAggTime = alignToInterval(record[1], aggInterval)
                 if currentAggTime ~= lastAggTime then
-                    aggRecord = { currentAggTime }
                     count = count + 1
-                    result[count] = aggRecord
+                    aggRecord = { currentAggTime }
+                    records[count] = aggRecord
                     lastAggTime = currentAggTime
                 end
                 for j, aggItem in ipairs(aggs) do
-                    local id = columnNames[aggItem.columnName]
-                    aggRecord[j + 1] = aggItem.aggFunction(aggRecord[j + 1], record[id])
+                    aggRecord[j + 1] = aggItem.aggFunction(aggRecord[j + 1], record[aggItem.columnId])
                 end
             end
             currentOffset = currentOffset + recordSize
@@ -216,7 +190,67 @@ function TSTable:queryRangeAggV2(queryStart, queryEnd, aggInterval, aggs)
         numRecordsRemaining = numRecordsRemaining - actualRecordsInBatch
     end
     file:close()
-    return result
+    return records
+end
+
+function TSTable:queryAggSliding(queryStart, queryEnd, aggInterval, aggs)
+    if self.fileSize == 0 then return {} end
+    local recordSize = self.schema.recordSize
+    local maxRecordsInBatch = math.floor(1048576 / recordSize)
+
+    queryStart = alignToInterval(queryStart, self.interval)
+    queryEnd = alignToInterval(queryEnd, self.interval)
+    local actualStart = math.max(queryStart, self.startTime)
+    local actualEnd = math.min(queryEnd, self.endTime)
+    if actualStart > actualEnd then return {} end
+
+    local startIndex = math.floor((actualStart - self.startTime) / self.interval)
+    local endIndex = math.floor((actualEnd - self.startTime) / self.interval)
+    local numRecordsRemaining = endIndex - startIndex + 1
+
+    local zeroRecordDataBin = TSPacker.getZeroRecordBinDataPart(self.schema)
+
+    local file = io.open(self.filePath, "rb")
+    if not file then return {} end
+    file:seek("set", startIndex * recordSize)
+
+    local records = {}
+    local count = 0
+    local aggRecord
+    local columnArray = {}
+    local ringbuffer = RingBuffer.new(aggInterval)
+    while numRecordsRemaining > 0 do
+        local recordsToRead = math.min(numRecordsRemaining, maxRecordsInBatch)
+        local batchSize = recordsToRead * recordSize
+        local bulkBinary = file:read(batchSize)
+        if not bulkBinary or #bulkBinary == 0 then
+            break
+        end
+        local currentOffset = 1
+        local actualRecordsInBatch = math.floor(#bulkBinary / recordSize)
+        for i = 1, actualRecordsInBatch do
+            local binaryRecord = bulkBinary:sub(currentOffset, currentOffset + recordSize - 1)
+            if not filterZero or not TSPacker.isZeroRecord(binaryRecord, zeroRecordDataBin) then
+                local record = TSPacker.unpackRecord(self.schema, binaryRecord)
+                ringbuffer:add(record)
+                if ringbuffer:isFull() then
+                    count = count + 1
+                    aggRecord = { record[1] }
+                    records[count] = aggRecord
+                    for j, aggItem in ipairs(aggs) do
+                        for g = 1, ringbuffer:size() do
+                            columnArray[g] = ringbuffer:get(g)[aggItem.columnId]
+                        end
+                        aggRecord[j + 1] = aggItem.aggFunction(columnArray)
+                    end
+                end
+            end
+            currentOffset = currentOffset + recordSize
+        end
+        numRecordsRemaining = numRecordsRemaining - actualRecordsInBatch
+    end
+    file:close()
+    return records
 end
 
 function TSTable:writeRecords(recordsArray)

@@ -15,24 +15,24 @@ function M.parserItem(schema, item)
 	if not columnName or not aggType then
     	error(string.format("Invalid aggregation expression: '%s'. Expected format: aggType(columnName)", item))
     end
-    if not schema.columnNames[columnName] then
+    local columnId = schema.columnNames[columnName]
+    if not columnId then
         error(string.format("Column name '%s' not found in schema.", columnName))
     end
 	local aggFunction = FUNCTIONS[aggType]
 	if not aggFunction then
 		error("Invalid aggType : " .. aggType)
 	end
-	return { columnName = columnName, aggFunction = aggFunction }
+	return { columnId = columnId, columnName = columnName, aggFunction = aggFunction }
 end
 
 function M.parserExpr(schema, expression)
 	local aggs = {}
-	expression = expression or schema.aggExpr
 	if not expression then
-		error("Schema aggExpr missing.")
+		error("Expression missing.")
 	end
-	for expItem in string.gmatch(expression, "[^,]+") do
-		table.insert(aggs, M.parserItem(schema, expItem))
+	for exprItem in string.gmatch(expression, "[^,]+") do
+		table.insert(aggs, M.parserItem(schema, exprItem))
 	end
 	return aggs
 end
