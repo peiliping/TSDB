@@ -42,7 +42,7 @@ function RingBuffer:getAll()
     local result = {}
     local currentIndex = self.tail
     for i = 1, self.count do
-        result[i] = self.data[currentIndex])
+        result[i] = self.data[currentIndex]
         currentIndex = (currentIndex % self.maxSize) + 1
     end
     return result

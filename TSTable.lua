@@ -193,7 +193,7 @@ function TSTable:queryAggTumbling(queryStart, queryEnd, aggInterval, aggs)
     return records
 end
 
-function TSTable:queryAggSliding(queryStart, queryEnd, aggInterval, aggs)
+function TSTable:queryAggSliding(queryStart, queryEnd, slidingSize, aggs)
     if self.fileSize == 0 then return {} end
     local recordSize = self.schema.recordSize
     local maxRecordsInBatch = math.floor(1048576 / recordSize)
@@ -218,7 +218,7 @@ function TSTable:queryAggSliding(queryStart, queryEnd, aggInterval, aggs)
     local count = 0
     local aggRecord
     local columnArray = {}
-    local ringbuffer = RingBuffer.new(aggInterval)
+    local ringbuffer = RingBuffer.new(slidingSize)
     while numRecordsRemaining > 0 do
         local recordsToRead = math.min(numRecordsRemaining, maxRecordsInBatch)
         local batchSize = recordsToRead * recordSize
@@ -261,7 +261,7 @@ function TSTable:writeRecords(recordsArray)
     local packedBatch = {}
     local packedBatchSize = 0
 
-    for i, record in ipairs(recordsArray) do
+    for _, record in ipairs(recordsArray) do
         local recordTime = alignToInterval(record[1], self.interval)
         if recordTime < lastRecordTime then
             -- 历史数据

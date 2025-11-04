@@ -26,9 +26,9 @@ local function executeAggTumbling(tsTable, startTs, endTs, newInterval, expr)
     end
 end
 
-local function executeAggSliding(tsTable, startTs, endTs, windowSize, expr)
+local function executeAggSliding(tsTable, startTs, endTs, slidingSize, expr)
     local aggs = AggFunctions.parserExpr(tsTable.schema, expr)
-    local records = tsTable:queryAggSliding(startTs, endTs, windowSize, aggs)
+    local records = tsTable:queryAggSliding(startTs, endTs, slidingSize, aggs)
     for _, record in ipairs(records) do
         print(table.concat(record, " "))
     end
@@ -134,6 +134,8 @@ local function main(args)
             executeAggTumbling(tsTable, st, et, num, expr, mode)
         elseif mode == "Sliding" then
             executeAggSliding(tsTable, st, et, num, expr, mode)
+        else
+            error("Unsupport Mode : " .. mode)
         end
     else
         print("  lua TSClient.lua stat [<table_name>]")
