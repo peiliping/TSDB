@@ -13,8 +13,14 @@ local function executeQuery(tsTable, startTs, endTs, filterZero)
 end
 
 local function executeRollup(srcTable, destTable, startTs, endTs)    
-    local aggs = AggFunctions.parserExpr(srcTable.schema, srcTable.schema.rollup) 
+    local aggs = AggFunctions.parserExpr(srcTable.schema, srcTable.schema.rollupExpr) 
     local records = srcTable:queryAggTumbling(startTs, endTs, destTable.interval, aggs)
+    print(destTable:writeRecords(records))
+end
+
+local function executeParallel(srcTable, destTable, startTs, endTs, size)    
+    local aggs = AggFunctions.parserExpr(srcTable.schema, srcTable.schema.parallelExpr) 
+    local records = srcTable:queryAggSliding(startTs, endTs, size, aggs)
     print(destTable:writeRecords(records))
 end
 
@@ -121,6 +127,17 @@ local function main(args)
         local st = checkArg("startTime", tonumber(args[4]))
         local et = checkArg("endTime", tonumber(args[5]))
         executeRollup(srcTable, destTable, st, et)
+    elseif cmd == "parallel" then
+        local srcTableName = checkArg("sourceTable", args[2])
+        local destTableName = checkArg("destTable", args[3])
+        local srcDB = TSDB.new(DATA_PATH, srcTableName, true)
+        local destDB = TSDB.new(DATA_PATH, destTableName, false)
+        local srcTable = srcDB:getTable(srcTableName)
+        local destTable = destDB:getTable(destTableName)
+        local st = checkArg("startTime", tonumber(args[4]))
+        local et = checkArg("endTime", tonumber(args[5]))
+        local size = checkArg("size", tonumber(args[5]))
+        executeParallel(srcTable, destTable, st, et, size)
     elseif cmd == "agg" then
         local tb = checkArg("tablenName", args[2])
         local st = checkArg("startTime", tonumber(args[3]))

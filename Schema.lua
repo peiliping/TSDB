@@ -20,7 +20,8 @@ local function create_kline_schema(interval_sec)
         { name = "open_interest", type = "number", precision = 3, signed = false },
     }
     return { columns = kline_base_columns,
-             rollup = "first(open),max(high),min(low),last(close),sum(volume),sum(quote_volume),sum(taker_buy_volume),sum(taker_buy_quote_volume),sum(count),last(long_short_delta),last(open_interest)"
+             rollupExpr = "first(open),max(high),min(low),last(close),sum(volume),sum(quote_volume),sum(taker_buy_volume),sum(taker_buy_quote_volume),sum(count),last(long_short_delta),last(open_interest)",
+             parallelExpr = "tail(close),lrUP(close),lrDN(close),tail(open_interest),lrUP(open_interest),lrDN(open_interest)",
             }
 end
 
