@@ -159,6 +159,7 @@ local function main(args)
         print("  lua TSClient.lua read <table_name> <start_ts> <end_ts> [filter_zero]")
         print("  lua TSClient.lua write <table_name> [<data...>]")
         print("  lua TSClient.lua rollup <source_table> <dest_table> <start_ts> <end_ts>")
+        print("  lua TSClient.lua parallel <source_table> <dest_table> <start_ts> <end_ts> <size>")
         print("  lua TSClient.lua agg <table_name> <start_ts> <end_ts> <number> <agg_expr> <mode>")
     end
 end
