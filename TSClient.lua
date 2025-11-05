@@ -136,7 +136,7 @@ local function main(args)
         local destTable = destDB:getTable(destTableName)
         local st = checkArg("startTime", tonumber(args[4]))
         local et = checkArg("endTime", tonumber(args[5]))
-        local size = checkArg("size", tonumber(args[5]))
+        local size = checkArg("size", tonumber(args[6]))
         executeParallel(srcTable, destTable, st, et, size)
     elseif cmd == "agg" then
         local tb = checkArg("tablenName", args[2])

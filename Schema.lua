@@ -25,10 +25,30 @@ local function create_kline_schema(interval_sec)
             }
 end
 
+local function create_kline_ln(interval_sec)
+
+    local kline_ln_columns = {
+        { name = "time", type = "timestamp", interval = interval_sec },
+        { name = "close", type = "number", precision = 2, signed = false },
+        { name = "close_ln_up", type = "number", precision = 2, signed = false },
+        { name = "close_ln_down", type = "number", precision = 2, signed = false },
+        { name = "open_interest", type = "number", precision = 3, signed = false },
+        { name = "oi_ln_up", type = "number", precision = 3, signed = false },
+        { name = "oi_ln_down", type = "number", precision = 3, signed = false },
+    }
+    return { columns = kline_ln_columns }
+end
+
 M.BTCUSDT_5MIN  = create_kline_schema(300)
 M.BTCUSDT_15MIN = create_kline_schema(900)
 M.BTCUSDT_30MIN = create_kline_schema(1800)
 M.BTCUSDT_1H    = create_kline_schema(3600)
 M.BTCUSDT_4H    = create_kline_schema(14400)
+
+M.BTCUSDT_LN_5MIN = create_kline_ln(300)
+M.BTCUSDT_LN_15MIN = create_kline_ln(900)
+M.BTCUSDT_LN_30MIN = create_kline_ln(1800)
+M.BTCUSDT_LN_1H = create_kline_ln(3600)
+M.BTCUSDT_LN_4H = create_kline_ln(14400)
 
 return M
