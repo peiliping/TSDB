@@ -1,5 +1,7 @@
 local M = {}
 
+local LR = require("LinearRegression")
+
 local FUNCTIONS = {
 
 	count = function(l, r) return (l or 0) + 1 end,
@@ -8,6 +10,10 @@ local FUNCTIONS = {
     min   = function(l, r) return l and math.min(l, r) or r end,
     max   = function(l, r) return l and math.max(l, r) or r end,
     sum   = function(l, r) return (l or 0) + r end,
+
+    lrUP  = function(source) return LR.calUp(source) end
+    lrMD  = function(source) return LR.calMiddle(source) end
+    lrDN  = function(source) return LR.calDown(source) end
 }
 
 function M.parserItem(schema, item)
