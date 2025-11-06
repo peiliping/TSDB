@@ -155,12 +155,12 @@ local function main(args)
             error("Unsupport Mode : " .. mode)
         end
     else
-        print("  lua TSClient.lua stat [<table_name>]")
-        print("  lua TSClient.lua read <table_name> <start_ts> <end_ts> [filter_zero]")
-        print("  lua TSClient.lua write <table_name> [<data...>]")
-        print("  lua TSClient.lua rollup <source_table> <dest_table> <start_ts> <end_ts>")
-        print("  lua TSClient.lua parallel <source_table> <dest_table> <start_ts> <end_ts> <size>")
-        print("  lua TSClient.lua agg <table_name> <start_ts> <end_ts> <number> <agg_expr> <mode>")
+        print("  tsdb stat [<table_name>]")
+        print("  tsdb read <table_name> <start_ts> <end_ts> [filter_zero]")
+        print("  tsdb write <table_name> [<data...>]")
+        print("  tsdb rollup <source_table> <dest_table> <start_ts> <end_ts>")
+        print("  tsdb parallel <source_table> <dest_table> <start_ts> <end_ts> <size>")
+        print("  tsdb agg <table_name> <start_ts> <end_ts> <number> <agg_expr> <mode>")
     end
 end
 

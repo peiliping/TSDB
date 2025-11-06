@@ -1,6 +1,6 @@
 local M = {}
 
-local function create_kline_schema(interval_sec)
+local function create_kline_base(interval_sec)
     
     local kline_base_columns = {
         { name = "time", type = "timestamp", interval = interval_sec },
@@ -39,16 +39,16 @@ local function create_kline_ln(interval_sec)
     return { columns = kline_ln_columns }
 end
 
-M.BTCUSDT_5MIN  = create_kline_schema(300)
-M.BTCUSDT_15MIN = create_kline_schema(900)
-M.BTCUSDT_30MIN = create_kline_schema(1800)
-M.BTCUSDT_1H    = create_kline_schema(3600)
-M.BTCUSDT_4H    = create_kline_schema(14400)
+M.BTC_KL_5M  = create_kline_base(300)
+M.BTC_KL_15M = create_kline_base(900)
+M.BTC_KL_30M = create_kline_base(1800)
+M.BTC_KL_1H  = create_kline_base(3600)
+M.BTC_KL_4H  = create_kline_base(14400)
 
-M.BTCUSDT_LN_5MIN = create_kline_ln(300)
-M.BTCUSDT_LN_15MIN = create_kline_ln(900)
-M.BTCUSDT_LN_30MIN = create_kline_ln(1800)
-M.BTCUSDT_LN_1H = create_kline_ln(3600)
-M.BTCUSDT_LN_4H = create_kline_ln(14400)
+M.BTC_LN_5M  = create_kline_ln(300)
+M.BTC_LN_15M = create_kline_ln(900)
+M.BTC_LN_30M = create_kline_ln(1800)
+M.BTC_LN_1H  = create_kline_ln(3600)
+M.BTC_LN_4H  = create_kline_ln(14400)
 
 return M
