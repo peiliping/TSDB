@@ -22,7 +22,6 @@ function Record.new(columns, data_list, nil_flags)
     end
     self.columns = columns
     self.data = data_list
-    self.nil_flags = 0
     if nil_flags then
         self.nil_flags = nil_flags
     else
@@ -49,33 +48,21 @@ function Record:is_nil_record()
 end
 
 function Record:get_value(column_name)
-    local index = self.columns:get_index_by_name(column_name)
-    if not index then
-        error("Record:get_value: Column '" .. column_name .. "' not found.")
-    end
-    if BitTools.check_bit(self.nil_flags, index - 1) then
-        return nil
-    end
-    return self.data[index]
+    return self:get_value_by_index(self.columns:get_index_by_name(column_name))
 end
 
 function Record:set_value(column_name, value)
-    local index = self.columns:get_index_by_name(column_name)
-    if not index then
-        error("Record:set_value: Column '" .. column_name .. "' not found.")
+    self:set_value_by_index(self.columns:get_index_by_name(column_name), value)
+end
+
+function Record:_check_index(index)
+    if index < 1 or index > self.columns:count() then
+        error(string.format("Record: Index %d is out of bounds (1 to %d).", index, self.columns:count()))
     end
-    if value == nil then
-        self.nil_flags = BitTools.set_bit(self.nil_flags, index - 1)
-    else
-        self.nil_flags = BitTools.clear_bit(self.nil_flags, index - 1)
-    end
-    self.data[index] = value
 end
 
 function Record:get_value_by_index(index)
-    if index < 1 or index > self.columns:count() then
-        error(string.format("Record:get_value_by_index: Index %d is out of bounds (1 to %d).", index, self.columns:count()))
-    end
+    self:_check_index(index)
     if BitTools.check_bit(self.nil_flags, index - 1) then
         return nil
     end
@@ -83,9 +70,7 @@ function Record:get_value_by_index(index)
 end
 
 function Record:set_value_by_index(index, value)
-    if index < 1 or index > self.columns:count() then
-        error(string.format("Record:set_value_by_index: Index %d is out of bounds (1 to %d).", index, self.columns:count()))
-    end
+    self:_check_index(index)
     if value == nil then
         self.nil_flags = BitTools.set_bit(self.nil_flags, index - 1)
     else
@@ -95,17 +80,11 @@ function Record:set_value_by_index(index, value)
 end
 
 function Record:is_column_nil(column_name)
-    local index = self.columns:get_index_by_name(column_name)
-    if not index then
-        error("Record:is_column_nil: Column '" .. column_name .. "' not found.")
-    end
-    return BitTools.check_bit(self.nil_flags, index - 1)
+    return self:is_column_nil_by_index(self.columns:get_index_by_name(column_name))
 end
 
 function Record:is_column_nil_by_index(index)
-    if index < 1 or index > self.columns:count() then
-        error(string.format("Record:is_column_nil_by_index: Index %d is out of bounds (1 to %d).", index, self.columns:count()))
-    end
+    self:_check_index(index)
     return BitTools.check_bit(self.nil_flags, index - 1)
 end
 

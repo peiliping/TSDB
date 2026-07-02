@@ -34,6 +34,12 @@ function Batch:add_record(record)
     self:add(record.data, record.nil_flags)
 end
 
+function Batch:add_records(records)
+    for _, record in ipairs(records) do
+        self:add_record(record)
+    end
+end
+
 function Batch:count()
     return #self.datas
 end

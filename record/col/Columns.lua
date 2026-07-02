@@ -40,20 +40,24 @@ function Columns.new(columns_list)
     return self
 end
 
-function Columns:get_by_name(column_name)
+function Columns:get_index_by_name(column_name)
     local index = self.name_to_index[column_name]
-    if index then
-        return self.cols[index]
+    if not index then
+        error("Column index not found for name: " .. tostring(column_name))
     end
-    return nil
+    return index
 end
 
 function Columns:get_by_index(index)
-    return self.cols[index]
+    local col = self.cols[index]
+    if not col then
+        error("Column not found at index: " .. tostring(index))
+    end
+    return col
 end
 
-function Columns:get_index_by_name(column_name)
-    return self.name_to_index[column_name]
+function Columns:get_by_name(column_name)
+    return self:get_by_index(self:get_index_by_name(column_name))
 end
 
 function Columns:count()

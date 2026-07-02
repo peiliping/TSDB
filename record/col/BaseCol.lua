@@ -22,4 +22,8 @@ function Column:pack_value(val)
     return val
 end
 
+function Column:unpack_value(val)
+    return val
+end
+
 return Column
