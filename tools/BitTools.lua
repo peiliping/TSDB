@@ -1,21 +1,19 @@
-local bit = require("bit")
-
 local B = {}
 
 function B.set_bit(flags, pos)
-    return bit.bor(flags, bit.lshift(1, pos))
+    return flags | (1 << pos)
 end
 
 function B.clear_bit(flags, pos)
-    return bit.band(flags, bit.bnot(bit.lshift(1, pos)))
+    return flags & (~(1 << pos))
 end
 
 function B.check_bit(flags, pos)
-    return bit.band(flags, bit.lshift(1, pos)) ~= 0
+    return (flags & (1 << pos)) ~= 0
 end
 
 function B.calculate_nil_record_flags(size)
-    return (bit.lshift(1, size) - 1) - 1
+    return (1 << size) - 1 - 1
 end
 
 function B.calculate_nil_flags(data_list)

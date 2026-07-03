@@ -1,8 +1,8 @@
 local BitTools = require("tools.BitTools")
 
-local BT = {}
+local B = {}
 
-function BT.pack_record_data(columns, data_list, nil_flags)
+function B.pack_record_data(columns, data_list, nil_flags)
     local packed_data = {}
     for i, col in ipairs(columns.cols) do
         if BitTools.check_bit(nil_flags, i - 1) then
@@ -14,7 +14,7 @@ function BT.pack_record_data(columns, data_list, nil_flags)
     return string.pack(columns.format_string, nil_flags, table.unpack(packed_data))
 end
 
-function BT.unpack_record_data(columns, record_binary_string)
+function B.unpack_record_data(columns, record_binary_string)
     local unpacked = { string.unpack(columns.format_string, record_binary_string) }
     local nil_flags = unpacked[1]
     local data_list = {}
@@ -28,4 +28,4 @@ function BT.unpack_record_data(columns, record_binary_string)
     return data_list, nil_flags
 end
 
-return BT
+return B

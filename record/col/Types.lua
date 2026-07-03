@@ -9,9 +9,7 @@ local TYPES = {
 }
 
 function T.get(type)
-    local type_info = TYPES[type]
-    assert(type_info, "Unknown type: " .. tostring(type))
-    return type_info
+    return TYPES[type] or error("Unknown type: " .. tostring(type))
 end
 
 return T

@@ -19,11 +19,11 @@ function Column.new(name, type_name)
 end
 
 function Column:pack_value(val)
-    return val
+    error(string.format("Column:pack_value must be implemented by subclasses for type '%s'.", self.type_name))
 end
 
 function Column:unpack_value(val)
-    return val
+    error(string.format("Column:unpack_value must be implemented by subclasses for type '%s'.", self.type_name))
 end
 
 return Column
