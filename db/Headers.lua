@@ -19,6 +19,10 @@ for _, col in pairs(H.ES) do
     H.header_length = H.header_length + col.size
     H.header_format = H.header_format .. col.format
 end
-H.crc_format = H.ES[4].format .. H.ES[4].format
+H.crc_format = H.ES[4].format .. H.ES[5].format
+
+function H.crc32(start_time, end_time)
+    return CryptoTools.crc32(string.pack(H.crc_format, start_time, end_time))
+end
 
 return H

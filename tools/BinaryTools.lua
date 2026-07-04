@@ -4,8 +4,7 @@ local Headers = require("db.Headers")
 local B = {}
 
 function B.pack_header(interval, record_size, start_time, end_time)
-    local crc32Str = string.pack(Headers.crc_format, start_time, end_time)
-    local crc32 = CryptoTools.crc32(crc32Str)
+    local crc32 = Headers.crc32(start_time, end_time)
     return string.pack(Headers.header_format, Headers.MAGIC, interval, record_size, start_time, end_time, crc32)
 end
 
