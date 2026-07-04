@@ -26,7 +26,7 @@ function Columns.new(columns_list)
     if not first_col or first_col.type_name ~= "timestamp" then
         error("Columns.new: The first column must be of type 'timestamp'.")
     end
-    local nil_flags_type = Types.get("number")
+    local nil_flags_type = Types.ES.number
     self.cols = columns_list
     self.name_to_index = {}
     self.record_size = nil_flags_type.size

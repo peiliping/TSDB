@@ -1,6 +1,18 @@
 local BitTools = require("tools.BitTools")
+local Headers = require("db.Headers")
 
 local B = {}
+
+function B.pack_header(interval, record_size, start_time, end_time)
+    local crc32Str = string.pack(Headers.crc_format, start_time, end_time)
+    local crc32 = CryptoTools.crc32(crc32Str)
+    return string.pack(Headers.header_format, Headers.MAGIC, interval, record_size, start_time, end_time, crc32)
+end
+
+-- magic, interval, record_size, start_time, end_time, crc32
+function B.unpack_header(header_binary_string)
+    return string.unpack(Headers.header_format, header_binary_string)
+end
 
 function B.pack_record_data(columns, data_list, nil_flags)
     local packed_data = {}
