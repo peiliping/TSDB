@@ -21,8 +21,4 @@ for _, col in pairs(H.ES) do
 end
 H.crc_format = H.ES[4].format .. H.ES[5].format
 
-function H.crc32(start_time, end_time)
-    return CryptoTools.crc32(string.pack(H.crc_format, start_time, end_time))
-end
-
 return H

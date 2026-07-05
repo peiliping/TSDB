@@ -1,16 +1,25 @@
 local BitTools = require("tools.BitTools")
 local Headers = require("db.Headers")
+local CryptoTools = require("tools.CryptoTools")
 
 local B = {}
 
-function B.pack_header(interval, record_size, start_time, end_time)
-    local crc32 = Headers.crc32(start_time, end_time)
-    return string.pack(Headers.header_format, Headers.MAGIC, interval, record_size, start_time, end_time, crc32)
+local function crc32(start_time, end_time)
+    return CryptoTools.crc32(string.pack(Headers.crc_format, start_time, end_time))
 end
 
--- magic, interval, record_size, start_time, end_time, crc32
-function B.unpack_header(header_binary_string)
-    return string.unpack(Headers.header_format, header_binary_string)
+function B.pack_header(interval, record_size, start_time, end_time)
+    local crc = crc32(start_time, end_time)
+    return string.pack(Headers.header_format, Headers.MAGIC, interval, record_size, start_time, end_time, crc)
+end
+
+function B.unpack_header(_interval, _record_size, header_bin)
+    local magic, interval, record_size, start_time, end_time, crc = string.unpack(Headers.header_format, header_bin)
+    assert(Headers.MAGIC == magic, "invalid magic number.")
+    assert(_interval == interval, "invalid interval.")
+    assert(_record_size == record_size, "invalid record size.")
+    assert(crc32(start_time, end_time) == crc, "invalid crc32")
+    return start_time, end_time
 end
 
 function B.pack_record_data(columns, data_list, nil_flags)
