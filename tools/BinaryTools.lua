@@ -1,11 +1,11 @@
 local BitTools = require("tools.BitTools")
 local Headers = require("db.Headers")
-local CryptoTools = require("tools.CryptoTools")
+local Crc32Tools = require("tools.Crc32Tools")
 
 local B = {}
 
 local function crc32(start_time, end_time)
-    return CryptoTools.crc32(string.pack(Headers.crc_format, start_time, end_time))
+    return Crc32Tools.crc32(string.pack(Headers.crc_format, start_time, end_time))
 end
 
 function B.pack_header(interval, record_size, start_time, end_time)

@@ -44,6 +44,16 @@ function Batch:count()
     return #self.datas
 end
 
+function Batch:start_time()
+    assert(self:count() > 0, "Batch is empty.")
+    return self.datas[1][1]
+end
+
+function Batch:end_time()
+    assert(self:count() > 0, "Batch is empty.")
+    return self.datas[#self.datas][1]
+end
+
 function Batch:get_record(index)
     if index < 1 or index > #self.datas then
         error(string.format("Batch:get_record: Index %d is out of bounds (1 to %d).", index, #self.datas))
@@ -59,13 +69,11 @@ function Batch:toBinary()
     return table.concat(result)
 end
 
-function Batch:fromBinary(binary_string, start_offset, end_offset)
+function Batch:fromBinary(binary_string)
     local record_size = self.columns.record_size
-    local start_pos = start_offset or 1
-    local end_pos = end_offset or #binary_string
-    local num_records = math.floor((end_pos - start_pos + 1) / record_size)
+    local num_records = math.floor(#binary_string / record_size)
     for k = 0, num_records - 1 do
-        local offset = start_pos + (k * record_size)
+        local offset = 1 + k * record_size
         local record_bin = binary_string:sub(offset, offset + record_size - 1)
         local data_list, nil_flags = BinaryTools.unpack_record_data(self.columns, record_bin)
         self:add(data_list, nil_flags)
