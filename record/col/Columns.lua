@@ -64,4 +64,8 @@ function Columns:count()
     return #self.cols
 end
 
+function Columns:get_interval()
+    return self.cols[1].interval
+end
+
 return Columns

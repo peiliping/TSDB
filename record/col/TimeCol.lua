@@ -4,11 +4,14 @@ local TimeCol = {
     interval = nil,
 }
 TimeCol.__index = TimeCol
-setmetatable(TimeCol, {__index = BaseCol})
+setmetatable(TimeCol, { __index = BaseCol })
 
 function TimeCol.new(name, interval)
     local self = BaseCol.new(name, "timestamp")
     setmetatable(self, TimeCol)
+    if not interval or interval <= 0 then
+        error("Column ('time'): 'interval' must be a positive number.")
+    end
     self.interval = interval
     self.size = self.type_def.size
     self.format = self.type_def.format_unsigned

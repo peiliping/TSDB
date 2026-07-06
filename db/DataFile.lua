@@ -120,4 +120,11 @@ function DataFile:read(batch, start_time, end_time)
     end
 end
 
+function DataFile:count()
+    if self.end_time == 0 then
+        return 0
+    end
+    return (self.end_time - self.start_time) / self.interval + 1
+end
+
 return DataFile
