@@ -4,6 +4,7 @@ local NumberCol = require("record.col.NumberCol")
 local Columns = require("record.col.Columns")
 local Record = require("record.Record")
 local Batch = require("record.Batch")
+local GroupBatch = require("record.GroupBatch")
 
 local DataTable = {
     name = nil,
@@ -95,11 +96,41 @@ function DataTable:queryRecords(start_time, end_time, filter_nil)
     return batch
 end
 
-function DataTable:queryAggTumbling(start_time, end_time, aggInterval, aggs)
+function DataTable:queryGroup(start_time, end_time, records_per_batch, filter_nil)
+    local aligned_start = alignToInterval(start_time, self.interval)
+    local aligned_end = alignToInterval(end_time, self.interval)
+    return GroupBatch.new(self, aligned_start, aligned_end, records_per_batch, filter_nil)
+end
 
+function DataTable:queryAggTumbling(start_time, end_time, aggInterval, aggs)
+    local result = {}
+    if not self.initialized then
+        return result
+    end
+    local group = self:queryGroup(start_time, end_time, nil, true)
+    local currentAggTime
+    local lastAggTime
+    local aggRecord
+    for record in group:iterator() do
+        currentAggTime = alignToInterval(record:getTimestamp(), aggInterval)
+        if currentAggTime ~= lastAggTime then
+            aggRecord = { currentAggTime }
+            table.insert(result, aggRecord)
+            lastAggTime = currentAggTime
+        end
+        for i, aggItem in ipairs(aggs) do
+            aggRecord[i + 1] = aggItem.aggFunction(aggRecord[i + 1], record[aggItem.columnId])
+        end
+    end
+    return result
 end
 
 function DataTable:queryAggSliding(start_time, end_time, slidingSize, aggs)
+    local result = {}
+    if not self.initialized then
+        return result
+    end
+    local group = self:queryGroup(start_time, end_time, nil, true)
 
 end
 

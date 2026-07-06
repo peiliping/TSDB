@@ -47,6 +47,10 @@ function Record:is_nil_record()
     return self.nil_flags == self.columns.nil_record_flags
 end
 
+function Record:getTimestamp()
+    return self:get_value_by_index(1)
+end
+
 function Record:get_value(column_name)
     return self:get_value_by_index(self.columns:get_index_by_name(column_name))
 end
