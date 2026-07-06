@@ -46,7 +46,7 @@ function DataFile:create()
 end
 
 local function getFile(path, mode)
-    local f = io.open(path, mode)
+    local f, err = io.open(path, mode)
     if not f then
         error("failed to open file: " .. path .. " err: " .. tostring(err))
     end
@@ -65,20 +65,24 @@ end
 
 function DataFile:write(batch)
     if batch:count() == 0 then
-        return
+        return 0
     end
     local b_start_time = batch:start_time()
     local b_end_time = batch:end_time()
     local batch_binary = batch:toBinary()
     local batch_len = #batch_binary
+    assert(batch:count() == math.floor((b_end_time - b_start_time) / self.interval + 1), "Batch Data Gap detected (discontinuity not allowed).")
 
     local cur_pos
     if self.start_time == 0 then
         cur_pos = Headers.header_length
         self.start_time = b_start_time
     else
-        assert(b_start_time <= (self.end_time + self.interval), "TimeSeries Data Missing.")
-        local offset_count = (b_start_time - self.start_time) / self.interval
+        if b_start_time < self.start_time then
+            error(string.format("Out of range: batch start_time %d < file start_time %d", b_start_time, self.start_time))
+        end
+        assert(b_start_time <= (self.end_time + self.interval), "TimeSeries Data Gap detected (discontinuity not allowed).")
+        local offset_count = math.floor((b_start_time - self.start_time) / self.interval)
         cur_pos = Headers.header_length + offset_count * self.record_size
     end
     local f = getFile(self.file_path, "r+b")
@@ -99,6 +103,7 @@ function DataFile:write(batch)
     f:write(BinaryTools.pack_header(self.interval, self.record_size, self.start_time, self.end_time))
     f:flush()
     f:close()
+    return batch_len
 end
 
 function DataFile:read(batch, start_time, end_time)
@@ -107,7 +112,7 @@ function DataFile:read(batch, start_time, end_time)
     if end_time < start_time then
         return
     end
-    local offset_count = (start_time - self.start_time) / self.interval
+    local offset_count = math.floor((start_time - self.start_time) / self.interval)
     local cur_pos = Headers.header_length + offset_count * self.record_size
     local read_len = ((end_time - start_time) / self.interval + 1) * self.record_size
 
@@ -124,7 +129,7 @@ function DataFile:count()
     if self.end_time == 0 then
         return 0
     end
-    return (self.end_time - self.start_time) / self.interval + 1
+    return math.floor((self.end_time - self.start_time) / self.interval + 1)
 end
 
 return DataFile

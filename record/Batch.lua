@@ -6,11 +6,12 @@ local Batch = {
     columns = nil,
     datas = nil,
     nil_flags = nil,
+    filter_nil = nil,
 }
 
 Batch.__index = Batch
 
-function Batch.new(columns)
+function Batch.new(columns, filter_nil)
     local self = {}
     setmetatable(self, Batch)
     if not columns or type(columns) ~= "table" then
@@ -19,14 +20,35 @@ function Batch.new(columns)
     self.columns = columns
     self.datas = {}
     self.nil_flags = {}
+    self.filter_nil = filter_nil or false
     return self
 end
 
 function Batch:add(data, nil_flags)
-    table.insert(self.datas, data)
     if not nil_flags then
         nil_flags = BitTools.calculate_nil_flags(data)
     end
+    if self.filter_nil then
+        if self.columns.nil_record_flags == nil_flags then
+            return
+        end
+    else
+        if self:count() > 0 then
+            local ts = data[1]
+            local interval = self.columns:get_interval()
+            assert(ts > self:end_time(), "Data Time out of order.")
+            if ts > self:end_time() + interval then
+                local current_ts = self:end_time() + interval
+                while current_ts < ts do
+                    local r_nil = Record.create_nil_record(self.columns, current_ts)
+                    table.insert(self.datas, r_nil.data)
+                    table.insert(self.nil_flags, r_nil.nil_flags)
+                    current_ts = current_ts + interval
+                end
+            end
+        end
+    end
+    table.insert(self.datas, data)
     table.insert(self.nil_flags, nil_flags)
 end
 
