@@ -94,11 +94,11 @@ end
 function Batch:fromBinary(binary_string)
     local record_size = self.columns.record_size
     local num_records = math.floor(#binary_string / record_size)
-    for k = 0, num_records - 1 do
-        local offset = 1 + k * record_size
-        local record_bin = binary_string:sub(offset, offset + record_size - 1)
-        local data_list, nil_flags = BinaryTools.unpack_record_data(self.columns, record_bin)
+    local pos = 1
+    for k = 1, num_records do
+        local data_list, nil_flags, next_pos = BinaryTools.unpack_record_data(self.columns, binary_string, pos)
         self:add(data_list, nil_flags)
+        pos = next_pos
     end
     return num_records
 end

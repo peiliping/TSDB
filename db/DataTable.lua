@@ -16,7 +16,7 @@ local DataTable = {
 
 DataTable.__index = DataTable
 
-local function config2cols(config)
+local function config_to_cols(config)
     local cols = {}
     for i, column in ipairs(config.columns) do
         if not column.name then
@@ -44,7 +44,7 @@ function DataTable.new(name, config, file_path)
     local self = {}
     setmetatable(self, DataTable)
     self.name = name
-    self.columns = Columns.new(config2cols(config))
+    self.columns = Columns.new(config_to_cols(config))
     self.data_file = DataFile.new(file_path, (config.block_size or 4 * 1024 * 1024),
             self.columns:get_interval(), self.columns.record_size)
     self.initialized = self.data_file:exist()
@@ -55,7 +55,7 @@ function DataTable.new(name, config, file_path)
     return self
 end
 
-function DataTable:getStat()
+function DataTable:get_stat()
     return (not self.initialized) and nil or {
         start_time = self.data_file.start_time,
         end_time = self.data_file.end_time,
@@ -66,16 +66,17 @@ function DataTable:getStat()
     }
 end
 
-local function alignToInterval(ts, interval)
+local function align_to_interval(ts, interval)
     return math.floor(ts / interval) * interval
 end
 
-function DataTable:writeRecords(batch)
-    if (not self.initialized) or (batch:count() == 0) then
+function DataTable:write_records(batch)
+    assert(self.initialized, "DataTable is not initialized.")
+    if batch:count() == 0 then
         return 0
     end
     local r = 0
-    if batch:start_time() > self.data_file.end_time + self.interval then
+    if self.data_file.end_time > 0 and batch:start_time() > self.data_file.end_time + self.interval then
         local blanks = Batch.new(self.columns, false)
         for ts = self.data_file.end_time + self.interval, batch:start_time() - self.interval, self.interval do
             blanks:add_record(Record.create_nil_record(self.columns, ts))
@@ -85,53 +86,62 @@ function DataTable:writeRecords(batch)
     return r + self.data_file:write(batch)
 end
 
-function DataTable:queryRecords(start_time, end_time, filter_nil)
+function DataTable:query_records(start_time, end_time, filter_nil)
     local batch = Batch.new(self.columns, filter_nil)
     if not self.initialized then
         return batch
     end
-    local aligned_start = alignToInterval(start_time, self.interval)
-    local aligned_end = alignToInterval(end_time, self.interval)
+    local aligned_start = align_to_interval(start_time, self.interval)
+    local aligned_end = align_to_interval(end_time, self.interval)
     self.data_file:read(batch, aligned_start, aligned_end)
     return batch
 end
 
-function DataTable:queryGroup(start_time, end_time, records_per_batch, filter_nil)
-    local aligned_start = alignToInterval(start_time, self.interval)
-    local aligned_end = alignToInterval(end_time, self.interval)
+function DataTable:query_group(start_time, end_time, records_per_batch, filter_nil)
+    local aligned_start = align_to_interval(start_time, self.interval)
+    local aligned_end = align_to_interval(end_time, self.interval)
     return GroupBatch.new(self, aligned_start, aligned_end, records_per_batch, filter_nil)
 end
 
-function DataTable:queryAggTumbling(start_time, end_time, aggInterval, aggs)
+function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_functions)
     local result = {}
     if not self.initialized then
         return result
     end
-    local group = self:queryGroup(start_time, end_time, nil, true)
-    local currentAggTime
-    local lastAggTime
-    local aggRecord
+    local group = self:query_group(start_time, end_time, nil, true)
+    local cur_agg_time
+    local last_agg_time
+    local agg_record
     for record in group:iterator() do
-        currentAggTime = alignToInterval(record:getTimestamp(), aggInterval)
-        if currentAggTime ~= lastAggTime then
-            aggRecord = { currentAggTime }
-            table.insert(result, aggRecord)
-            lastAggTime = currentAggTime
+        cur_agg_time = align_to_interval(record:getTimestamp(), agg_interval)
+        if cur_agg_time ~= last_agg_time then
+            if agg_record then
+                for i, mr in ipairs(mr_functions) do
+                    agg_record[i + 1] = mr.reduce(agg_record[i + 1])
+                end
+            end
+            agg_record = { cur_agg_time }
+            table.insert(result, agg_record)
+            last_agg_time = cur_agg_time
         end
-        for i, aggItem in ipairs(aggs) do
-            aggRecord[i + 1] = aggItem.aggFunction(aggRecord[i + 1], record[aggItem.columnId])
+        for i, mr in ipairs(mr_functions) do
+            agg_record[i + 1] = mr.map(agg_record[i + 1], record:get_value_by_index(mr.columnId))
+        end
+    end
+    if agg_record then
+        for i, mr in ipairs(mr_functions) do
+            agg_record[i + 1] = mr.reduce(agg_record[i + 1])
         end
     end
     return result
 end
 
-function DataTable:queryAggSliding(start_time, end_time, slidingSize, aggs)
-    local result = {}
-    if not self.initialized then
-        return result
-    end
-    local group = self:queryGroup(start_time, end_time, nil, true)
-
-end
+--function DataTable:query_agg_sliding(start_time, end_time, slidingSize, aggs)
+--    local result = {}
+--    if not self.initialized then
+--        return result
+--    end
+--    local group = self:query_group(start_time, end_time, nil, true)
+--end
 
 return DataTable

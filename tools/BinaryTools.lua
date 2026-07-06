@@ -34,8 +34,8 @@ function B.pack_record_data(columns, data_list, nil_flags)
     return string.pack(columns.format_string, nil_flags, table.unpack(packed_data))
 end
 
-function B.unpack_record_data(columns, record_binary_string)
-    local unpacked = { string.unpack(columns.format_string, record_binary_string) }
+function B.unpack_record_data(columns, record_binary, offset)
+    local unpacked = { string.unpack(columns.format_string, record_binary, offset) }
     local nil_flags = unpacked[1]
     local data_list = {}
     for i, col in ipairs(columns.cols) do
@@ -45,7 +45,7 @@ function B.unpack_record_data(columns, record_binary_string)
             data_list[i] = col:unpack_value(unpacked[i + 1])
         end
     end
-    return data_list, nil_flags
+    return data_list, nil_flags, unpacked[#unpacked]
 end
 
 return B

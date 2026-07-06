@@ -45,7 +45,7 @@ function DataFile:create()
     self.end_time = 0
 end
 
-local function getFile(path, mode)
+local function get_file(path, mode)
     local f, err = io.open(path, mode)
     if not f then
         error("failed to open file: " .. path .. " err: " .. tostring(err))
@@ -54,7 +54,7 @@ local function getFile(path, mode)
 end
 
 function DataFile:load()
-    local f = getFile(self.file_path, "rb")
+    local f = get_file(self.file_path, "rb")
     local binary = f:read(Headers.header_length)
     self.file_size = f:seek("end")
     f:close()
@@ -85,7 +85,7 @@ function DataFile:write(batch)
         local offset_count = math.floor((b_start_time - self.start_time) / self.interval)
         cur_pos = Headers.header_length + offset_count * self.record_size
     end
-    local f = getFile(self.file_path, "r+b")
+    local f = get_file(self.file_path, "r+b")
     if cur_pos + batch_len > self.file_size then
         local exp_block_count = math.ceil((cur_pos + batch_len - self.file_size) / self.file_block_size)
         local expand_size = exp_block_count * self.file_block_size
@@ -116,7 +116,7 @@ function DataFile:read(batch, start_time, end_time)
     local cur_pos = Headers.header_length + offset_count * self.record_size
     local read_len = ((end_time - start_time) / self.interval + 1) * self.record_size
 
-    local f = getFile(self.file_path, "rb")
+    local f = get_file(self.file_path, "rb")
     f:seek("set", cur_pos)
     local binary_string = f:read(read_len)
     f:close()
