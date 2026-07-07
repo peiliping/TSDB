@@ -6,6 +6,7 @@ local Record = require("record.Record")
 local Batch = require("record.Batch")
 local GroupBatch = require("record.GroupBatch")
 local Functions = require("aggregate.Functions")
+local RingBuffer = require("aggregate.RingBuffer")
 
 local DataTable = {
     name = nil,
@@ -134,6 +135,19 @@ function DataTable:query_agg_sliding(start_time, end_time, slidingSize, mr_funct
     self:_check_init()
     local group = self:query_group(start_time, end_time, nil, true)
     local result = {}
+    local ring_buffer = RingBuffer.new(slidingSize)
+    for record in group:iterator() do
+        ring_buffer:add(record)
+        if ring_buffer:is_full() then
+            local agg_record = { record:getTimestamp() }
+            table.insert(result, agg_record)
+            for i = 1, ring_buffer:size(), 1 do
+                Functions.scan_map(mr_functions, agg_record, ring_buffer:get(i))
+            end
+            Functions.scan_reduce(mr_functions, agg_record)
+        end
+    end
+    return result
 end
 
 return DataTable
