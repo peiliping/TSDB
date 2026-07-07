@@ -20,7 +20,7 @@ function FS.get(mr_name)
 end
 
 function FS.parse_item(expression, columns)
-    local mr_name, column_name = string.match(expression, "([a-zA-Z]+)%s*%(%s*([^)]+)%s*%)")
+    local mr_name, column_name = string.match(expression, "([%a%d_]+)%s*%(%s*([%a%d_]+)%s*%)")
     if not mr_name or not column_name then
         error(string.format("Invalid expression: '%s'.", expression))
     end

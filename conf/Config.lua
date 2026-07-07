@@ -5,7 +5,17 @@ local TABLE_CONFIG = {
     block_size = nil,
 }
 
-local function create_kline_base(interval_sec)
+TABLE_CONFIG.__index = TABLE_CONFIG
+
+function TABLE_CONFIG.new(columns, block_size)
+    local self = {}
+    setmetatable(self, TABLE_CONFIG)
+    self.columns = columns
+    self.block_size = (block_size or 4 * 1024 * 1024)
+    return self
+end
+
+local function create_kline_base(interval_sec, block_size)
     local kline_base_columns = {
         { name = "time", type = "timestamp", interval = interval_sec },
         -- K线价格数据
@@ -23,7 +33,7 @@ local function create_kline_base(interval_sec)
         { name = "long_short_delta", type = "shortnumber", precision = 3, signed = true },
         { name = "open_interest", type = "number", precision = 3, signed = false },
     }
-    return { columns = kline_base_columns }
+    return TABLE_CONFIG.new(kline_base_columns, block_size)
 end
 
 S.BTC_KL_5M = create_kline_base(300)

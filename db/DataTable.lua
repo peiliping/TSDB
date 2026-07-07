@@ -44,7 +44,7 @@ function DataTable.new(name, config, file_path)
     setmetatable(self, DataTable)
     self.name = name
     self.columns = Columns.new(config_to_cols(config))
-    self.data_file = DataFile.new(file_path, (config.block_size or 4 * 1024 * 1024),
+    self.data_file = DataFile.new(file_path, config.block_size,
             self.columns:get_interval(), self.columns.record_size)
     self.initialized = self.data_file:exist()
     if self.initialized then
