@@ -39,7 +39,7 @@ function Group:next()
             return nil
         end
         local current_end = math.min(self.current_start + self.chunk_duration, self.total_end)
-        self.current_batch = self.data_table:queryRecords(self.current_start, current_end, self.filter_nil)
+        self.current_batch = self.data_table:query_records(self.current_start, current_end, self.filter_nil)
         self.current_index = 0
         self.current_start = current_end + self.interval
     end

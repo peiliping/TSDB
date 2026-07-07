@@ -9,7 +9,7 @@ local FS = {
         max   = { map = function(l, r) return l and math.max(l, r) or r end },
         sum   = { map = function(l, r) return (l or 0) + r end },
         avg   = {
-            map = function(l, r) l = (l or { 0, 0 }); return {l[1] + r, l[2] + 1} end,
+            map = function(l, r) l = (l or { 0, 0 }); l[1] = l[1] + r; l[2] = l[2] + 1; return l end,
             reduce = function(v) return v[1] / v[2] end
         }
     }
@@ -24,7 +24,7 @@ function FS.parse_item(expression, columns)
     if not mr_name or not column_name then
         error(string.format("Invalid expression: '%s'.", expression))
     end
-    local mr_function = FS.ES.get(mr_name)
+    local mr_function = FS.get(mr_name)
     local column_id = columns:get_index_by_name(column_name)
     return MapReduce.new(column_id, column_name, mr_function.map, mr_function.reduce)
 end
