@@ -1,5 +1,10 @@
 local S = {}
 
+local TABLE_CONFIG = {
+    columns = nil,
+    block_size = nil,
+}
+
 local function create_kline_base(interval_sec)
     local kline_base_columns = {
         { name = "time", type = "timestamp", interval = interval_sec },

@@ -74,11 +74,12 @@ function DataFile:write(batch)
     if batch:count() ~= math.floor((b_end_time - b_start_time) / self.interval + 1) then
         error("Batch Data Gap detected (discontinuity not allowed).")
     end
-
+    local update_header = false
     local cur_pos
     if self.start_time == 0 then
         cur_pos = Headers.header_length
         self.start_time = b_start_time
+        update_header = true
     else
         if b_start_time < self.start_time then
             error(string.format("Out of range: batch start_time %d < file start_time %d", b_start_time, self.start_time))
@@ -100,12 +101,16 @@ function DataFile:write(batch)
     end
     f:seek("set", cur_pos)
     f:write(batch_binary)
+    f:flush()
     if b_end_time > self.end_time then
         self.end_time = b_end_time
+        update_header = true
     end
-    f:seek("set", 0)
-    f:write(BinaryTools.pack_header(self.interval, self.record_size, self.start_time, self.end_time))
-    f:flush()
+    if update_header then
+        f:seek("set", 0)
+        f:write(BinaryTools.pack_header(self.interval, self.record_size, self.start_time, self.end_time))
+        f:flush()
+    end
     f:close()
     return batch_len
 end

@@ -26,9 +26,6 @@ local function config_to_cols(config)
             error(string.format("Column %d ('%s'): 'type' is missing.", i, column.name))
         end
         if i == 1 then
-            if column.name ~= "time" then
-                error(string.format("Column %d: First column 'name' must be 'time'.", i))
-            end
             if column.type ~= "timestamp" then
                 error(string.format("Column %d ('time'): 'type' must be 'timestamp'.", i))
             end
@@ -70,10 +67,14 @@ local function align_to_interval(ts, interval)
     return math.floor(ts / interval) * interval
 end
 
-function DataTable:write_records(batch)
+function DataTable:_check_init()
     if not self.initialized then
         error("DataTable is not initialized.")
     end
+end
+
+function DataTable:write_records(batch)
+    self:_check_init()
     if batch:count() == 0 then
         return 0
     end
@@ -89,10 +90,8 @@ function DataTable:write_records(batch)
 end
 
 function DataTable:query_records(start_time, end_time, filter_nil)
+    self:_check_init()
     local batch = Batch.new(self.columns, filter_nil)
-    if not self.initialized then
-        return batch
-    end
     local aligned_start = align_to_interval(start_time, self.interval)
     local aligned_end = align_to_interval(end_time, self.interval)
     self.data_file:read(batch, aligned_start, aligned_end)
@@ -106,11 +105,9 @@ function DataTable:query_group(start_time, end_time, records_per_batch, filter_n
 end
 
 function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_functions)
-    local result = {}
-    if not self.initialized then
-        return result
-    end
+    self:_check_init()
     local group = self:query_group(start_time, end_time, nil, true)
+    local result = {}
     local cur_agg_time
     local last_agg_time
     local agg_record
