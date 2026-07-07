@@ -10,7 +10,7 @@ function TimeCol.new(name, interval)
     local self = BaseCol.new(name, "timestamp")
     setmetatable(self, TimeCol)
     if not interval or interval <= 0 then
-        error("Column ('time'): 'interval' must be a positive number.")
+        error(string.format("Column ('%s'): 'interval' must be a positive number.", name))
     end
     self.interval = interval
     self.size = self.type_def.size

@@ -65,7 +65,7 @@ function Columns:count()
 end
 
 function Columns:get_interval()
-    return self.cols[1].interval
+    return self:get_by_index(1).interval
 end
 
 return Columns

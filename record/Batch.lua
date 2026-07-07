@@ -15,7 +15,7 @@ function Batch.new(columns, filter_nil)
     local self = {}
     setmetatable(self, Batch)
     if not columns or type(columns) ~= "table" then
-        error("Batch.new: 'columns' must be a table (Columns object).")
+        error("Batch.new: 'columns' must be a table.")
     end
     self.columns = columns
     self.datas = {}
@@ -36,14 +36,13 @@ function Batch:add(data, nil_flags)
         if self:count() > 0 then
             local ts = data[1]
             local interval = self.columns:get_interval()
-            assert(ts > self:end_time(), "Data Time out of order.")
-            if ts > self:end_time() + interval then
-                local current_ts = self:end_time() + interval
-                while current_ts < ts do
-                    local r_nil = Record.create_nil_record(self.columns, current_ts)
+            local end_time = self:end_time()
+            assert(ts > end_time, "Data Time out of order.")
+            if ts > end_time + interval then
+                for cur_ts = end_time + interval, ts - interval, interval do
+                    local r_nil = Record.create_nil_record(self.columns, cur_ts)
                     table.insert(self.datas, r_nil.data)
                     table.insert(self.nil_flags, r_nil.nil_flags)
-                    current_ts = current_ts + interval
                 end
             end
         end
@@ -85,22 +84,20 @@ end
 
 function Batch:toBinary()
     local result = {}
-    for k, data in ipairs(self.datas) do
-        result[k] = BinaryTools.pack_record_data(self.columns, data, self.nil_flags[k])
+    for i, data in ipairs(self.datas) do
+        result[i] = BinaryTools.pack_record_data(self.columns, data, self.nil_flags[i])
     end
     return table.concat(result)
 end
 
 function Batch:fromBinary(binary_string)
-    local record_size = self.columns.record_size
-    local num_records = math.floor(#binary_string / record_size)
     local pos = 1
-    for k = 1, num_records do
+    local len = #binary_string
+    while pos <= len do
         local data_list, nil_flags, next_pos = BinaryTools.unpack_record_data(self.columns, binary_string, pos)
         self:add(data_list, nil_flags)
         pos = next_pos
     end
-    return num_records
 end
 
 return Batch
