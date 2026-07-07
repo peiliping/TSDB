@@ -71,7 +71,9 @@ local function align_to_interval(ts, interval)
 end
 
 function DataTable:write_records(batch)
-    assert(self.initialized, "DataTable is not initialized.")
+    if not self.initialized then
+        error("DataTable is not initialized.")
+    end
     if batch:count() == 0 then
         return 0
     end

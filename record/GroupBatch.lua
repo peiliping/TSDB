@@ -21,7 +21,7 @@ function Group.new(data_table, start_time, end_time, records_per_batch, filter_n
     self.total_start = start_time
     self.total_end = end_time
     self.records_per_batch = records_per_batch or 100000
-    self.chunk_duration = self.records_per_batch * self.interval
+    self.chunk_duration = (self.records_per_batch - 1) * self.interval
     self.filter_nil = filter_nil or false
 
     self.current_start = start_time
@@ -38,10 +38,7 @@ function Group:next()
         if self.current_start > self.total_end then
             return nil
         end
-        local current_end = self.current_start + self.chunk_duration - self.interval
-        if current_end > self.total_end then
-            current_end = self.total_end
-        end
+        local current_end = math.min(self.current_start + self.chunk_duration, self.total_end)
         self.current_batch = self.data_table:queryRecords(self.current_start, current_end, self.filter_nil)
         self.current_index = 0
         self.current_start = current_end + self.interval

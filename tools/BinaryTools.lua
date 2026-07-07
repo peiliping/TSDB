@@ -15,10 +15,18 @@ end
 
 function B.unpack_header(_interval, _record_size, header_bin)
     local magic, interval, record_size, start_time, end_time, crc = string.unpack(Headers.header_format, header_bin)
-    assert(Headers.MAGIC == magic, "invalid magic number.")
-    assert(_interval == interval, "invalid interval.")
-    assert(_record_size == record_size, "invalid record size.")
-    assert(crc32(start_time, end_time) == crc, "invalid crc32")
+    if Headers.MAGIC ~= magic then
+        error("invalid magic number.")
+    end
+    if _interval ~= interval then
+        error("invalid interval.")
+    end
+    if _record_size ~= record_size then
+        error("invalid record size.")
+    end
+    if crc32(start_time, end_time) ~= crc then
+        error("invalid crc32")
+    end
     return start_time, end_time
 end
 

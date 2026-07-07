@@ -37,7 +37,9 @@ function Batch:add(data, nil_flags)
             local ts = data[1]
             local interval = self.columns:get_interval()
             local end_time = self:end_time()
-            assert(ts > end_time, "Data Time out of order.")
+            if ts <= end_time then
+                error("Data Time out of order.")
+            end
             if ts > end_time + interval then
                 for cur_ts = end_time + interval, ts - interval, interval do
                     local r_nil = Record.create_nil_record(self.columns, cur_ts)
@@ -66,12 +68,16 @@ function Batch:count()
 end
 
 function Batch:start_time()
-    assert(self:count() > 0, "Batch is empty.")
+    if self:count() == 0 then
+        error("Batch is empty.")
+    end
     return self.datas[1][1]
 end
 
 function Batch:end_time()
-    assert(self:count() > 0, "Batch is empty.")
+    if self:count() == 0 then
+        error("Batch is empty.")
+    end
     return self.datas[#self.datas][1]
 end
 

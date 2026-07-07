@@ -71,7 +71,9 @@ function DataFile:write(batch)
     local b_end_time = batch:end_time()
     local batch_binary = batch:toBinary()
     local batch_len = #batch_binary
-    assert(batch:count() == math.floor((b_end_time - b_start_time) / self.interval + 1), "Batch Data Gap detected (discontinuity not allowed).")
+    if batch:count() ~= math.floor((b_end_time - b_start_time) / self.interval + 1) then
+        error("Batch Data Gap detected (discontinuity not allowed).")
+    end
 
     local cur_pos
     if self.start_time == 0 then
@@ -81,7 +83,9 @@ function DataFile:write(batch)
         if b_start_time < self.start_time then
             error(string.format("Out of range: batch start_time %d < file start_time %d", b_start_time, self.start_time))
         end
-        assert(b_start_time <= (self.end_time + self.interval), "TimeSeries Data Gap detected (discontinuity not allowed).")
+        if b_start_time > (self.end_time + self.interval) then
+            error("TimeSeries Data Gap detected (discontinuity not allowed).")
+        end
         local offset_count = math.floor((b_start_time - self.start_time) / self.interval)
         cur_pos = Headers.header_length + offset_count * self.record_size
     end
