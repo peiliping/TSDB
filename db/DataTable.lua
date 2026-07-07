@@ -5,6 +5,7 @@ local Columns = require("record.col.Columns")
 local Record = require("record.Record")
 local Batch = require("record.Batch")
 local GroupBatch = require("record.GroupBatch")
+local Functions = require("aggregate.Functions")
 
 local DataTable = {
     name = nil,
@@ -115,32 +116,24 @@ function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_fun
         cur_agg_time = align_to_interval(record:getTimestamp(), agg_interval)
         if cur_agg_time ~= last_agg_time then
             if agg_record then
-                for i, mr in ipairs(mr_functions) do
-                    agg_record[i + 1] = mr.reduce(agg_record[i + 1])
-                end
+                Functions.scan_reduce(mr_functions, agg_record)
             end
             agg_record = { cur_agg_time }
             table.insert(result, agg_record)
             last_agg_time = cur_agg_time
         end
-        for i, mr in ipairs(mr_functions) do
-            agg_record[i + 1] = mr.map(agg_record[i + 1], record:get_value_by_index(mr.columnId))
-        end
+        Functions.scan_map(mr_functions, agg_record, record)
     end
     if agg_record then
-        for i, mr in ipairs(mr_functions) do
-            agg_record[i + 1] = mr.reduce(agg_record[i + 1])
-        end
+        Functions.scan_reduce(mr_functions, agg_record)
     end
     return result
 end
 
---function DataTable:query_agg_sliding(start_time, end_time, slidingSize, aggs)
---    local result = {}
---    if not self.initialized then
---        return result
---    end
---    local group = self:query_group(start_time, end_time, nil, true)
---end
+function DataTable:query_agg_sliding(start_time, end_time, slidingSize, mr_functions)
+    self:_check_init()
+    local group = self:query_group(start_time, end_time, nil, true)
+    local result = {}
+end
 
 return DataTable
