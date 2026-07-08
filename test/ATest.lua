@@ -1,6 +1,8 @@
 local test_cases = {
     { require("test.t_Functions") },
     { require("test.t_RingBuffer") },
+    { require("test.t_BitTools") },
+    --{ require("test.t_BinaryTools") },
 }
 
 for i, tc in ipairs(test_cases) do

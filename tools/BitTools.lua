@@ -16,10 +16,10 @@ function B.calculate_nil_record_flags(size)
     return (1 << size) - 1 - 1
 end
 
-function B.calculate_nil_flags(data_list)
+function B.calculate_nil_flags(data_list, data_count)
     local flags = 0
-    for i, data in ipairs(data_list) do
-        if data == nil then
+    for i = 1, data_count do
+        if data_list[i] == nil then
             flags = B.set_bit(flags, i - 1)
         end
     end

@@ -26,7 +26,7 @@ end
 
 function Batch:add(data, nil_flags)
     if not nil_flags then
-        nil_flags = BitTools.calculate_nil_flags(data)
+        nil_flags = BitTools.calculate_nil_flags(data, self.columns:count())
     end
     if self.filter_nil then
         if self.columns.nil_record_flags == nil_flags then

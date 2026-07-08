@@ -25,7 +25,7 @@ function Record.new(columns, data_list, nil_flags)
     if nil_flags then
         self.nil_flags = nil_flags
     else
-        self.nil_flags = BitTools.calculate_nil_flags(data_list)
+        self.nil_flags = BitTools.calculate_nil_flags(data_list, columns:count())
     end
     return self
 end
