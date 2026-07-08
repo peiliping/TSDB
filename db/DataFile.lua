@@ -113,7 +113,7 @@ function DataFile:write(batch)
         f:flush()
     end
     f:close()
-    return batch_len
+    return batch:count()
 end
 
 function DataFile:read(batch, start_time, end_time)

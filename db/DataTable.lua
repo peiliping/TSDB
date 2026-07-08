@@ -5,7 +5,6 @@ local Columns = require("record.col.Columns")
 local Record = require("record.Record")
 local Batch = require("record.Batch")
 local GroupBatch = require("record.GroupBatch")
-local Functions = require("aggregate.Functions")
 local RingBuffer = require("aggregate.RingBuffer")
 
 local DataTable = {
