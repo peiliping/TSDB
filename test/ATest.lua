@@ -3,6 +3,7 @@ local test_cases = {
     { require("test.t_RingBuffer") },
     { require("test.t_BitTools") },
     { require("test.t_BinaryTools") },
+    { require("test.t_Record") },
     --TODO @record
     --TODO @db
 }

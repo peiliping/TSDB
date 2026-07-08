@@ -75,15 +75,17 @@ function Batch:start_time()
 end
 
 function Batch:end_time()
-    if self:count() == 0 then
+    local c = self:count()
+    if c == 0 then
         error("Batch is empty.")
     end
-    return self.datas[#self.datas][1]
+    return self.datas[c][1]
 end
 
 function Batch:get_record(index)
-    if index < 1 or index > #self.datas then
-        error(string.format("Batch:get_record: Index %d is out of bounds (1 to %d).", index, #self.datas))
+    local c = self:count()
+    if index < 1 or index > c then
+        error(string.format("Batch:get_record: Index %d is out of bounds (1 to %d).", index, c))
     end
     return Record.new(self.columns, self.datas[index], self.nil_flags[index])
 end
