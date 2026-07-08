@@ -29,10 +29,11 @@ local FS = {
                 local sumxx = 0
                 local sumxy = 0
                 for i = 1, size do
+                    local v = rb:get(i)
                     sumx = sumx + i
-                    sumy = sumy + rb:get(i)
+                    sumy = sumy + v
                     sumxx = sumxx + i * i
-                    sumxy = sumxy + i * rb:get(i)
+                    sumxy = sumxy + i * v
                 end
                 if size < 2 then
                     return { 0, 0 }
