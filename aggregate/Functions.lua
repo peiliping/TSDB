@@ -78,10 +78,4 @@ function FS.parse_expression(expression, columns)
     return mr_functions
 end
 
-function FS.scan_reduce(mr_functions, agg_record, column_datas)
-    for i, mr in ipairs(mr_functions) do
-        agg_record[i + 1] = mr.reduce(agg_record[i + 1], column_datas and column_datas[i + 1])
-    end
-end
-
 return FS

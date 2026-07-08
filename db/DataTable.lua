@@ -113,6 +113,12 @@ function DataTable:query_group(start_time, end_time, records_per_batch, filter_n
     return GroupBatch.new(self, aligned_start, aligned_end, records_per_batch, filter_nil)
 end
 
+local function scan_reduce(mr_functions, agg_record, column_datas)
+    for i, mr in ipairs(mr_functions) do
+        agg_record[i + 1] = mr.reduce(agg_record[i + 1], column_datas and column_datas[i + 1])
+    end
+end
+
 function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_functions)
     self:_check_init()
     local group = self:query_group(start_time, end_time, nil, true)
@@ -124,7 +130,7 @@ function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_fun
         cur_agg_time = align_to_interval(record:getTimestamp(), agg_interval)
         if cur_agg_time ~= last_agg_time then
             if agg_record then
-                Functions.scan_reduce(mr_functions, agg_record)
+                scan_reduce(mr_functions, agg_record)
             end
             agg_record = { cur_agg_time }
             table.insert(result, agg_record)
@@ -135,7 +141,7 @@ function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_fun
         end
     end
     if agg_record then
-        Functions.scan_reduce(mr_functions, agg_record)
+        scan_reduce(mr_functions, agg_record)
     end
     return result
 end
@@ -163,7 +169,7 @@ function DataTable:query_agg_sliding(start_time, end_time, slidingSize, mr_funct
                     agg_record[k + 1] = mr.map(agg_record[k + 1], column_datas[mr.column_id]:get(i))
                 end
             end
-            Functions.scan_reduce(mr_functions, agg_record, column_datas)
+            scan_reduce(mr_functions, agg_record, column_datas)
         end
     end
     return result
