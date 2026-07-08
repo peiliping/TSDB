@@ -1,9 +1,7 @@
 local RingBuffer = {
     max_size = nil,
     data = nil,
-    head = nil, -- 指向【下一个】要写入的位置
-    tail = nil, -- 指向【最早一个】元素的位置
-    count = nil,
+    index = nil,
 }
 
 RingBuffer.__index = RingBuffer
@@ -16,47 +14,49 @@ function RingBuffer.new(max_size)
     end
     self.max_size = max_size
     self.data = {}
-    self.head = 1
-    self.tail = 1
-    self.count = 0
+    self.index = 0
     return self
 end
 
 function RingBuffer:add(ele)
-    self.data[self.head] = ele
-    if self:is_full() then
-        self.tail = (self.tail % self.max_size) + 1
-    else
-        self.count = self.count + 1
+    self.data[self.index % self.max_size + 1] = ele
+    self.index = self.index + 1
+    if self.index == (self.max_size * 2) then
+        self.index = self.index - self.max_size
     end
-    self.head = (self.head % self.max_size) + 1
 end
 
 function RingBuffer:get(id)
-    if id < 1 or id > self.count then
+    local current_size = self:size()
+    if id < 1 or id > current_size then
         error("Index out of range.")
     end
-    -- 2. 计算物理索引
-    -- (self.tail - 1)         -- 将 1-based 的 tail 转为 0-based
-    -- (id - 1)                -- 将 1-based 的逻辑索引转为 0-based 偏移
-    -- (...) % self.max_size   -- 计算 0-based 的物理索引 (处理环绕)
-    -- ... + 1                 -- 将结果转回 1-based 供 table 使用
-    local index = (self.tail - 1 + id - 1) % self.max_size + 1
-    return self.data[index]
+    local start = 0
+    if self.index <= self.max_size then
+        start = 1
+    else
+        start = self.index - self.max_size + 1
+    end
+    local pos = start + id - 1
+    if pos > self.max_size then
+        pos = pos - self.max_size
+    end
+    return self.data[pos]
 end
 
 function RingBuffer:size()
-    return self.count
+    return math.min(self.index, self.max_size)
 end
 
 function RingBuffer:is_full()
-    return self.count == self.max_size
+    return self.index >= self.max_size
 end
 
 function RingBuffer:clear()
-    self.head = 1
-    self.tail = 1
-    self.count = 0
+    self.index = 0
+    for i = 1, self.max_size do
+        self.data[i] = nil
+    end
 end
 
 return RingBuffer

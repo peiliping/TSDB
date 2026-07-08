@@ -123,7 +123,9 @@ function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_fun
             table.insert(result, agg_record)
             last_agg_time = cur_agg_time
         end
-        Functions.scan_map(mr_functions, agg_record, record)
+        for i, mr in ipairs(mr_functions) do
+            agg_record[i + 1] = mr.map(agg_record[i + 1], record:get_value_by_index(mr.column_id))
+        end
     end
     if agg_record then
         Functions.scan_reduce(mr_functions, agg_record)
@@ -135,16 +137,26 @@ function DataTable:query_agg_sliding(start_time, end_time, slidingSize, mr_funct
     self:_check_init()
     local group = self:query_group(start_time, end_time, nil, true)
     local result = {}
-    local ring_buffer = RingBuffer.new(slidingSize)
+    local column_datas = {}
+    local col_count = self.columns:count()
+    for i = 1, col_count do
+        column_datas[i] = RingBuffer.new(slidingSize)
+    end
+    local seq = 0
     for record in group:iterator() do
-        ring_buffer:add(record)
-        if ring_buffer:is_full() then
+        seq = seq + 1
+        for i = 1, col_count do
+            column_datas[i]:add(record:get_value_by_index(i))
+        end
+        if seq >= slidingSize then
             local agg_record = { record:getTimestamp() }
             table.insert(result, agg_record)
-            for i = 1, ring_buffer:size(), 1 do
-                Functions.scan_map(mr_functions, agg_record, ring_buffer:get(i))
+            for i = 1, slidingSize do
+                for k, mr in ipairs(mr_functions) do
+                    agg_record[k + 1] = mr.map(agg_record[k + 1], column_datas[mr.column_id]:get(i))
+                end
             end
-            Functions.scan_reduce(mr_functions, agg_record)
+            Functions.scan_reduce(mr_functions, agg_record, column_datas)
         end
     end
     return result

@@ -8,10 +8,45 @@ local FS = {
         min   = { map = function(l, r) return l and math.min(l, r) or r end },
         max   = { map = function(l, r) return l and math.max(l, r) or r end },
         sum   = { map = function(l, r) return (l or 0) + r end },
-        avg   = {
-            map = function(l, r) l = (l or { 0, 0 }); l[1] = l[1] + r; l[2] = l[2] + 1; return l end,
-            reduce = function(v) return v[1] / v[2] end
-        }
+        avg = {
+            map = function(l, r)
+                if not l then
+                    l = { r, 1 }
+                else
+                    l[1] = l[1] + r
+                    l[2] = l[2] + 1
+                end
+                return l
+            end,
+            reduce = function(v)
+                return v[1] / v[2]
+            end
+        },
+        lr = {
+            reduce = function(_, source)
+                local size = #source
+                local sumx = 0
+                local sumy = 0
+                local sumxx = 0
+                local sumxy = 0
+                for i = 1, size do
+                    sumx = sumx + i
+                    sumy = sumy + source[i]
+                    sumxx = sumxx + i * i
+                    sumxy = sumxy + i * source[i]
+                end
+                local slope = (size * sumxy - sumx * sumy) / (size * sumxx - sumx * sumx)
+                local intercept = sumy / size - slope * sumx / size + slope
+                local stdDevAcc = 0
+                for i = 1, size do
+                    local p = i * slope + intercept
+                    stdDevAcc = stdDevAcc + math.pow((source[i] - p), 2)
+                end
+                local stdDev = math.sqrt(stdDevAcc / (size - 1))
+                local py = size * slope + intercept
+                return { py + 2 * stdDev, py - 2 * stdDev }
+            end
+        },
     }
 }
 
@@ -40,15 +75,9 @@ function FS.parse_expression(expression, columns)
     return mr_functions
 end
 
-function FS.scan_map(mr_functions, agg_record, record)
+function FS.scan_reduce(mr_functions, agg_record, column_datas)
     for i, mr in ipairs(mr_functions) do
-        agg_record[i + 1] = mr.map(agg_record[i + 1], record:get_value_by_index(mr.column_id))
-    end
-end
-
-function FS.scan_reduce(mr_functions, agg_record)
-    for i, mr in ipairs(mr_functions) do
-        agg_record[i + 1] = mr.reduce(agg_record[i + 1])
+        agg_record[i + 1] = mr.reduce(agg_record[i + 1], column_datas and column_datas[i + 1])
     end
 end
 
