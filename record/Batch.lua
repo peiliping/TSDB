@@ -90,8 +90,9 @@ end
 
 function Batch:toBinary()
     local result = {}
+    local cache = {}
     for i, data in ipairs(self.datas) do
-        result[i] = BinaryTools.pack_record_data(self.columns, data, self.nil_flags[i])
+        result[i] = BinaryTools.pack_record_data(self.columns, data, self.nil_flags[i], cache)
     end
     return table.concat(result)
 end

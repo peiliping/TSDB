@@ -30,8 +30,10 @@ function B.unpack_header(_interval, _record_size, header_bin)
     return start_time, end_time
 end
 
-function B.pack_record_data(columns, data_list, nil_flags)
-    local packed_data = {}
+function B.pack_record_data(columns, data_list, nil_flags, packed_data)
+    if not packed_data then
+        packed_data = {}
+    end
     for i, col in ipairs(columns.cols) do
         if BitTools.check_bit(nil_flags, i - 1) then
             packed_data[i] = 0
