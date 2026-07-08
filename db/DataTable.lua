@@ -54,6 +54,13 @@ function DataTable.new(name, config, file_path)
     return self
 end
 
+function DataTable:create()
+    if not self.initialized then
+        self.data_file:create()
+        self.initialized = true
+    end
+end
+
 function DataTable:get_stat()
     return (not self.initialized) and nil or {
         start_time = self.data_file.start_time,
