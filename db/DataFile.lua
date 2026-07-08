@@ -31,10 +31,18 @@ function DataFile:exist()
     return f ~= nil
 end
 
+local function get_file(path, mode)
+    local f, err = io.open(path, mode)
+    if not f then
+        error("failed to open file: " .. path .. " err: " .. tostring(err))
+    end
+    return f
+end
+
 function DataFile:create()
     local f = io.open(self.file_path, "r")
     if not f then
-        f = io.open(self.file_path, "wb")
+        f = get_file(self.file_path, "wb")
         f:write(BinaryTools.pack_header(self.interval, self.record_size, 0, 0))
         f:write(string.rep("\0", self.file_block_size))
         f:flush()
@@ -43,14 +51,6 @@ function DataFile:create()
     self.file_size = Headers.header_length + self.file_block_size
     self.start_time = 0
     self.end_time = 0
-end
-
-local function get_file(path, mode)
-    local f, err = io.open(path, mode)
-    if not f then
-        error("failed to open file: " .. path .. " err: " .. tostring(err))
-    end
-    return f
 end
 
 function DataFile:load()
