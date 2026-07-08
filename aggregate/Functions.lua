@@ -11,11 +11,10 @@ local FS = {
         avg = {
             map = function(l, r)
                 if not l then
-                    l = { r, 1 }
-                else
-                    l[1] = l[1] + r
-                    l[2] = l[2] + 1
+                    return { r, 1 }
                 end
+                l[1] = l[1] + r
+                l[2] = l[2] + 1
                 return l
             end,
             reduce = function(v)
@@ -23,24 +22,27 @@ local FS = {
             end
         },
         lr = {
-            reduce = function(_, source)
-                local size = #source
+            reduce = function(_, rb)
+                local size = rb:size()
                 local sumx = 0
                 local sumy = 0
                 local sumxx = 0
                 local sumxy = 0
                 for i = 1, size do
                     sumx = sumx + i
-                    sumy = sumy + source[i]
+                    sumy = sumy + rb:get(i)
                     sumxx = sumxx + i * i
-                    sumxy = sumxy + i * source[i]
+                    sumxy = sumxy + i * rb:get(i)
+                end
+                if size < 2 then
+                    return { 0, 0 }
                 end
                 local slope = (size * sumxy - sumx * sumy) / (size * sumxx - sumx * sumx)
                 local intercept = sumy / size - slope * sumx / size + slope
                 local stdDevAcc = 0
                 for i = 1, size do
                     local p = i * slope + intercept
-                    stdDevAcc = stdDevAcc + math.pow((source[i] - p), 2)
+                    stdDevAcc = stdDevAcc + math.pow((rb:get(i) - p), 2)
                 end
                 local stdDev = math.sqrt(stdDevAcc / (size - 1))
                 local py = size * slope + intercept

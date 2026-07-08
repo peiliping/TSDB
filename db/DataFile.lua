@@ -93,10 +93,11 @@ function DataFile:write(batch)
     local f = get_file(self.file_path, "r+b")
     if cur_pos + batch_len > self.file_size then
         local exp_block_count = math.ceil((cur_pos + batch_len - self.file_size) / self.file_block_size)
-        local expand_size = exp_block_count * self.file_block_size
-        f:seek("end")
-        f:write(string.rep("\0", expand_size))
-        self.file_size = self.file_size + expand_size
+        for i = 1, exp_block_count do
+            f:seek("end")
+            f:write(string.rep("\0", self.file_block_size))
+            self.file_size = self.file_size + self.file_block_size
+        end
         f:flush()
     end
     f:seek("set", cur_pos)
