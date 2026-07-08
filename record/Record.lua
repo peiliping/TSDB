@@ -17,7 +17,7 @@ function Record.new(columns, data_list, nil_flags)
     if not data_list or type(data_list) ~= "table" then
         error("Record.new: 'data_list' must be a table.")
     end
-    if columns:count() ~= #data_list then
+    if columns:count() < #data_list then
         error("Record.new: Column definition count does not match data value count.")
     end
     self.columns = columns
@@ -31,11 +31,7 @@ function Record.new(columns, data_list, nil_flags)
 end
 
 function Record.create_nil_record(columns, timestamp_value)
-    local data_list = { timestamp_value }
-    for i = 2, columns:count() do
-        data_list[i] = nil
-    end
-    return Record.new(columns, data_list, columns.nil_record_flags)
+    return Record.new(columns, { timestamp_value }, columns.nil_record_flags)
 end
 
 function Record.fromBinary(columns, binary_string)
