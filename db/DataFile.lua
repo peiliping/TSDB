@@ -70,9 +70,6 @@ function DataFile:write(batch)
     local b_end_time = batch:end_time()
     local batch_binary = batch:toBinary()
     local batch_len = #batch_binary
-    if batch:count() ~= math.floor((b_end_time - b_start_time) / self.interval + 1) then
-        error("Batch Data Gap detected (discontinuity not allowed).")
-    end
     local update_header = false
     local cur_pos
     if self.start_time == 0 then

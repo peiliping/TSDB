@@ -21,7 +21,6 @@ function DB.new(root_path, v_table_name)
             local path = get_file_path(self.root_path, table_name)
             self.data_tables[table_name] = DataTable.new(table_name, config, path)
         end
-        return self
     end
     if v_table_name and not self.data_tables[v_table_name] then
         error(string.format("Table '%s' not defined.", v_table_name))

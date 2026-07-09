@@ -24,10 +24,9 @@ function Batch.new(columns, filter_nil)
 end
 
 function Batch:add(data, nil_flags)
-    if not nil_flags then
-        nil_flags = BitTools.calculate_nil_flags(data, self.columns:count())
-    end
-    if data[1] % self.columns:get_interval() ~= 0 then
+    local ts = data[1]
+    local interval = self.columns:get_interval()
+    if ts % interval ~= 0 then
         error("Data Time not match interval.")
     end
     if self.filter_nil then
@@ -36,8 +35,6 @@ function Batch:add(data, nil_flags)
         end
     else
         if self:count() > 0 then
-            local ts = data[1]
-            local interval = self.columns:get_interval()
             local end_time = self:end_time()
             if ts <= end_time then
                 error("Data Time out of order.")
@@ -50,6 +47,9 @@ function Batch:add(data, nil_flags)
                 end
             end
         end
+    end
+    if not nil_flags then
+        nil_flags = BitTools.calculate_nil_flags(data, self.columns:count())
     end
     table.insert(self.datas, data)
     table.insert(self.nil_flags, nil_flags)
@@ -70,7 +70,8 @@ function Batch:count()
 end
 
 function Batch:start_time()
-    if self:count() == 0 then
+    local c = self:count()
+    if c == 0 then
         error("Batch is empty.")
     end
     return self.datas[1][1]
