@@ -19,6 +19,11 @@ function Record.new(columns, data_list, nil_flags)
     if columns:count() < #data_list then
         error("Record.new: Column definition count does not match data value count.")
     end
+    local ts = data_list[1]
+    local interval = columns:get_interval()
+    if ts % interval ~= 0 then
+        error("Data Time not match interval.")
+    end
     self.columns = columns
     self.data = data_list
     if nil_flags then

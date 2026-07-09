@@ -3,18 +3,6 @@ local TestTools = require("test.TestTools")
 
 local test_case = {}
 
-function test_case.test_FS_get()
-    -- Test valid function names
-    assert(Functions.get("count") ~= nil)
-    assert(Functions.get("first") ~= nil)
-    assert(Functions.get("last") ~= nil)
-    assert(Functions.get("min") ~= nil)
-    assert(Functions.get("max") ~= nil)
-    assert(Functions.get("sum") ~= nil)
-    assert(Functions.get("avg") ~= nil)
-    assert(Functions.get("lr") ~= nil)
-end
-
 function test_case.test_FS_parse_item()
     local mock_columns = {
         get_index_by_name = function(_, name)

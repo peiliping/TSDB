@@ -24,5 +24,5 @@ for _, module_name in ipairs(test_cases) do
         test_module[method_name]()
         print("test result : Passed.")
     end
-    print("--------------------------------------------------------------------------------")
+    print("----------------------------------------------------------------------------")
 end
