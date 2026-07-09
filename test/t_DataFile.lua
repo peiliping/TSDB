@@ -3,42 +3,35 @@ local DataFile = require("db.DataFile")
 local Headers = require("db.Headers")
 local BinaryTools = require("tools.BinaryTools")
 
-local t_DataFile = {}
+local Columns = require("record.col.Columns")
+local NumberCol = require("record.col.NumberCol")
+local TimeCol = require("record.col.TimeCol")
+local Batch = require("record.Batch")
+local Record = require("record.Record")
+
+local test_case = {}
 
 local TEST_DIR = "./test_data/"
 local TEST_FILE = TEST_DIR .. "test_datafile.bin"
 local TEST_BLOCK_SIZE = 1024
-local TEST_INTERVAL = 60 -- 1 minute interval
-local TEST_RECORD_SIZE = 8 -- Dummy record size for testing
+local TEST_INTERVAL = 60
 
--- Helper function to create a dummy Batch object
-local function create_dummy_batch(start_time, end_time, count, record_size)
-    local batch = {}
-    batch.start_ts = start_time
-    batch.end_ts = end_time
-    batch.record_count = count
-    batch.record_size = record_size
+local col_timestamp = TimeCol.new("timestamp", TEST_INTERVAL)
+local col_value = NumberCol.new("value", "number", 0, false)
+local real_cols = Columns.new({ col_timestamp, col_value })
 
-    function batch:count()
-        return self.record_count
+local TEST_RECORD_SIZE = real_cols.record_size
+
+local function create_real_batch(start_ts, count)
+    local current_batch = Batch.new(real_cols)
+    for i = 0, count - 1 do
+        local ts = start_ts + i * TEST_INTERVAL
+        local value = math.random(1, 100)
+        current_batch:add({ ts, value })
     end
-
-    function batch:start_time()
-        return self.start_ts
-    end
-
-    function batch:end_time()
-        return self.end_ts
-    end
-
-    function batch:toBinary()
-        -- Simulate binary data for the batch
-        return string.rep("A", self.record_count * self.record_size)
-    end
-    return batch
+    return current_batch
 end
 
--- Setup and Teardown
 local function setup()
     os.execute("mkdir -p " .. TEST_DIR)
     os.execute("rm -f " .. TEST_FILE)
@@ -48,14 +41,14 @@ local function teardown()
     os.execute("rm -rf " .. TEST_DIR)
 end
 
-function t_DataFile.test_new_and_exist()
+function test_case.test_new_and_exist()
     setup()
     local df = DataFile.new(TEST_FILE, TEST_BLOCK_SIZE, TEST_INTERVAL, TEST_RECORD_SIZE)
     assert(not df:exist(), "File should not exist initially")
     teardown()
 end
 
-function t_DataFile.test_create_and_load()
+function test_case.test_create_and_load()
     setup()
     local df = DataFile.new(TEST_FILE, TEST_BLOCK_SIZE, TEST_INTERVAL, TEST_RECORD_SIZE)
     df:create()
@@ -74,27 +67,25 @@ function t_DataFile.test_create_and_load()
     teardown()
 end
 
-function t_DataFile.test_write_single_batch_to_empty_file()
+function test_case.test_write_single_batch_to_empty_file()
     setup()
     local df = DataFile.new(TEST_FILE, TEST_BLOCK_SIZE, TEST_INTERVAL, TEST_RECORD_SIZE)
     df:create()
 
-    local start_ts = 1000
-    local end_ts = 1000 + TEST_INTERVAL * 2
+    local start_ts = 1000 * TEST_INTERVAL
     local count = 3
-    local batch = create_dummy_batch(start_ts, end_ts, count, TEST_RECORD_SIZE)
+    local batch = create_real_batch(start_ts, count)
 
     local written_count = df:write(batch)
     assert(count == written_count, "Written count mismatch")
-    assert(start_ts == df.start_time, "start_time after first write mismatch")
-    assert(end_ts == df.end_time, "end_time after first write mismatch")
+    assert(batch:start_time() == df.start_time, "start_time after first write mismatch")
+    assert(batch:end_time() == df.end_time, "end_time after first write mismatch")
 
-    -- Verify file content and header
     local f = io.open(TEST_FILE, "rb")
     local header_binary = f:read(Headers.header_length)
     local file_start_time, file_end_time = BinaryTools.unpack_header(header_binary, TEST_INTERVAL, TEST_RECORD_SIZE)
-    assert(start_ts == file_start_time, "Header start_time mismatch")
-    assert(end_ts == file_end_time, "Header end_time mismatch")
+    assert(batch:start_time() == file_start_time, "Header start_time mismatch")
+    assert(batch:end_time() == file_end_time, "Header end_time mismatch")
 
     f:seek("set", Headers.header_length)
     local data_binary = f:read(count * TEST_RECORD_SIZE)
@@ -103,52 +94,47 @@ function t_DataFile.test_write_single_batch_to_empty_file()
     teardown()
 end
 
-function t_DataFile.test_write_multiple_batches_append()
+function test_case.test_write_multiple_batches_append()
     setup()
     local df = DataFile.new(TEST_FILE, TEST_BLOCK_SIZE, TEST_INTERVAL, TEST_RECORD_SIZE)
     df:create()
 
-    local start_ts1 = 1000
-    local end_ts1 = 1000 + TEST_INTERVAL * 2
+    local start_ts1 = 1000 * TEST_INTERVAL
     local count1 = 3
-    local batch1 = create_dummy_batch(start_ts1, end_ts1, count1, TEST_RECORD_SIZE)
+    local batch1 = create_real_batch(start_ts1, count1)
     df:write(batch1)
 
-    local start_ts2 = end_ts1 + TEST_INTERVAL
-    local end_ts2 = start_ts2 + TEST_INTERVAL * 1
+    local start_ts2 = batch1:end_time() + TEST_INTERVAL
     local count2 = 2
-    local batch2 = create_dummy_batch(start_ts2, end_ts2, count2, TEST_RECORD_SIZE)
+    local batch2 = create_real_batch(start_ts2, count2)
     df:write(batch2)
 
-    assert(start_ts1 == df.start_time, "start_time after append mismatch")
-    assert(end_ts2 == df.end_time, "end_time after append mismatch")
-    assert(count1 + count2 == df:count(), "Total count after append mismatch")
+    assert(batch1:start_time() == df.start_time, "start_time after append mismatch")
+    assert(batch2:end_time() == df.end_time, "end_time after append mismatch")
+    assert(batch1:count() + batch2:count() == df:count(), "Total count after append mismatch")
 
     teardown()
 end
 
-function t_DataFile.test_write_multiple_batches_overwrite()
+function test_case.test_write_multiple_batches_overwrite()
     setup()
     local df = DataFile.new(TEST_FILE, TEST_BLOCK_SIZE, TEST_INTERVAL, TEST_RECORD_SIZE)
     df:create()
 
-    local start_ts1 = 1000
-    local end_ts1 = 1000 + TEST_INTERVAL * 4
+    local start_ts1 = 1000 * TEST_INTERVAL
     local count1 = 5
-    local batch1 = create_dummy_batch(start_ts1, end_ts1, count1, TEST_RECORD_SIZE)
+    local batch1 = create_real_batch(start_ts1, count1)
     df:write(batch1)
 
-    local start_ts2 = 1000 + TEST_INTERVAL * 1 -- Overlap with batch1
-    local end_ts2 = start_ts2 + TEST_INTERVAL * 1
+    local start_ts2 = start_ts1 + TEST_INTERVAL * 1
     local count2 = 2
-    local batch2 = create_dummy_batch(start_ts2, end_ts2, count2, TEST_RECORD_SIZE)
+    local batch2 = create_real_batch(start_ts2, count2)
     df:write(batch2)
 
-    assert(start_ts1 == df.start_time, "start_time after overwrite mismatch")
-    assert(end_ts1 == df.end_time, "end_time after overwrite mismatch")
-    assert(count1 == df:count(), "Total count after overwrite mismatch") -- Count should remain based on original range
+    assert(batch1:start_time() == df.start_time, "start_time after overwrite mismatch")
+    assert(batch1:end_time() == df.end_time, "end_time after overwrite mismatch")
+    assert(batch1:count() == df:count(), "Total count after overwrite mismatch")
 
-    -- Verify content of the overwritten part
     local f = io.open(TEST_FILE, "rb")
     f:seek("set", Headers.header_length + (start_ts2 - start_ts1) / TEST_INTERVAL * TEST_RECORD_SIZE)
     local overwritten_data = f:read(count2 * TEST_RECORD_SIZE)
@@ -158,7 +144,7 @@ function t_DataFile.test_write_multiple_batches_overwrite()
     teardown()
 end
 
-function t_DataFile.test_write_file_expansion()
+function test_case.test_write_file_expansion()
     setup()
     local df = DataFile.new(TEST_FILE, TEST_BLOCK_SIZE, TEST_INTERVAL, TEST_RECORD_SIZE)
     df:create()
@@ -166,11 +152,9 @@ function t_DataFile.test_write_file_expansion()
     local initial_file_size = Headers.header_length + TEST_BLOCK_SIZE
     assert(initial_file_size == df.file_size, "Initial file size incorrect")
 
-    -- Write a batch that exceeds the initial block size
-    local start_ts = 1000
-    local count = math.floor((TEST_BLOCK_SIZE * 2) / TEST_RECORD_SIZE) + 1 -- Ensure it spans multiple blocks
-    local end_ts = start_ts + (count - 1) * TEST_INTERVAL
-    local batch = create_dummy_batch(start_ts, end_ts, count, TEST_RECORD_SIZE)
+    local start_ts = 1000 * TEST_INTERVAL
+    local count = math.floor((TEST_BLOCK_SIZE * 2) / TEST_RECORD_SIZE) + 1
+    local batch = create_real_batch(start_ts, count)
 
     df:write(batch)
 
@@ -182,136 +166,144 @@ function t_DataFile.test_write_file_expansion()
     teardown()
 end
 
-function t_DataFile.test_write_error_out_of_range_start_time()
+function test_case.test_write_error_out_of_range_start_time()
     setup()
     local df = DataFile.new(TEST_FILE, TEST_BLOCK_SIZE, TEST_INTERVAL, TEST_RECORD_SIZE)
     df:create()
 
-    local start_ts1 = 1000
-    local end_ts1 = 1000 + TEST_INTERVAL * 2
-    local batch1 = create_dummy_batch(start_ts1, end_ts1, 3, TEST_RECORD_SIZE)
+    local start_ts1 = 1000 * TEST_INTERVAL
+    local count1 = 3
+    local batch1 = create_real_batch(start_ts1, count1)
     df:write(batch1)
 
-    local start_ts_error = 900 -- Before file start_time
-    local end_ts_error = start_ts_error + TEST_INTERVAL
-    local batch_error = create_dummy_batch(start_ts_error, end_ts_error, 2, TEST_RECORD_SIZE)
+    local start_ts_error = (1000 - 1) * TEST_INTERVAL
+    local count_error = 2
+    local batch_error = create_real_batch(start_ts_error, count_error)
 
     TestTools.assertErrorMsgContains("Out of range", function() df:write(batch_error) end)
 
     teardown()
 end
 
-function t_DataFile.test_write_error_data_gap()
+function test_case.test_write_error_data_gap()
     setup()
     local df = DataFile.new(TEST_FILE, TEST_BLOCK_SIZE, TEST_INTERVAL, TEST_RECORD_SIZE)
     df:create()
 
-    local start_ts1 = 1000
-    local end_ts1 = 1000 + TEST_INTERVAL * 2
-    local batch1 = create_dummy_batch(start_ts1, end_ts1, 3, TEST_RECORD_SIZE)
+    local start_ts1 = 1000 * TEST_INTERVAL
+    local count1 = 3
+    local batch1 = create_real_batch(start_ts1, count1)
     df:write(batch1)
 
-    local start_ts_gap = end_ts1 + TEST_INTERVAL * 2 -- Gap of one interval
-    local end_ts_gap = start_ts_gap + TEST_INTERVAL
-    local batch_gap = create_dummy_batch(start_ts_gap, end_ts_gap, 2, TEST_RECORD_SIZE)
+    local start_ts_gap = batch1:end_time() + TEST_INTERVAL * 2
+    local count_gap = 2
+    local batch_gap = create_real_batch(start_ts_gap, count_gap)
 
     TestTools.assertErrorMsgContains("Data Gap detected", function() df:write(batch_gap) end)
 
     teardown()
 end
 
-function t_DataFile.test_read_full_range()
+local function compare_batches(expected_batch, actual_batch, test_name)
+    assert(expected_batch:count() == actual_batch:count(), test_name .. ": Batch count mismatch")
+    assert(expected_batch:start_time() == actual_batch:start_time(), test_name .. ": Batch start_time mismatch")
+    assert(expected_batch:end_time() == actual_batch:end_time(), test_name .. ": Batch end_time mismatch")
+
+    for i = 1, expected_batch:count() do
+        local expected_record = expected_batch:get_record(i)
+        local actual_record = actual_batch:get_record(i)
+
+        assert(expected_record:getTimestamp() == actual_record:getTimestamp(), test_name .. ": Record " .. i .. " timestamp mismatch")
+        assert(expected_record.nil_flags == actual_record.nil_flags, test_name .. ": Record " .. i .. " nil_flags mismatch")
+
+        local expected_value = expected_record:get_value("value")
+        local actual_value = actual_record:get_value("value")
+
+        if expected_value == nil and actual_value == nil then
+            assert(true, test_name .. ": Record " .. i .. " value: both nil")
+        elseif expected_value ~= nil and actual_value ~= nil then
+            assert(math.abs(expected_value - actual_value) < 0.001, test_name .. ": Record " .. i .. " value mismatch (non-nil)")
+        else
+            assert(false, test_name .. ": Record " .. i .. " value mismatch (one nil, one not)")
+        end
+    end
+end
+
+function test_case.test_read_full_range()
     setup()
     local df = DataFile.new(TEST_FILE, TEST_BLOCK_SIZE, TEST_INTERVAL, TEST_RECORD_SIZE)
     df:create()
 
-    local start_ts = 1000
-    local end_ts = 1000 + TEST_INTERVAL * 4
+    local start_ts = 1000 * TEST_INTERVAL
     local count = 5
-    local batch_to_write = create_dummy_batch(start_ts, end_ts, count, TEST_RECORD_SIZE)
+    local batch_to_write = create_real_batch(start_ts, count)
     df:write(batch_to_write)
 
-    local read_batch = {}
-    function read_batch:fromBinary(binary_data)
-        self.binary_data = binary_data
-    end
-    df:read(read_batch, start_ts, end_ts)
-    assert(batch_to_write:toBinary() == read_batch.binary_data, "Read data mismatch for full range")
+    local read_batch_obj = Batch.new(real_cols)
+    df:read(read_batch_obj, batch_to_write:start_time(), batch_to_write:end_time())
+    compare_batches(batch_to_write, read_batch_obj, "test_read_full_range")
 
     teardown()
 end
 
-function t_DataFile.test_read_partial_range()
+function test_case.test_read_partial_range()
     setup()
     local df = DataFile.new(TEST_FILE, TEST_BLOCK_SIZE, TEST_INTERVAL, TEST_RECORD_SIZE)
     df:create()
 
-    local start_ts = 1000
-    local end_ts = 1000 + TEST_INTERVAL * 9
+    local start_ts = 1000 * TEST_INTERVAL
     local count = 10
-    local batch_to_write = create_dummy_batch(start_ts, end_ts, count, TEST_RECORD_SIZE)
-    df:write(batch_to_write)
+    local full_batch_to_write = create_real_batch(start_ts, count)
+    df:write(full_batch_to_write)
 
     local read_start_ts = start_ts + TEST_INTERVAL * 2
     local read_end_ts = start_ts + TEST_INTERVAL * 5
-    -- local expected_read_count = 4 -- records from index 2 to 5 (inclusive) -- Not used
 
-    local read_batch = {}
-    function read_batch:fromBinary(binary_data)
-        self.binary_data = binary_data
+    local read_batch_obj = Batch.new(real_cols)
+    df:read(read_batch_obj, read_start_ts, read_end_ts)
+
+    local expected_partial_batch = Batch.new(real_cols)
+    for ts = read_start_ts, read_end_ts, TEST_INTERVAL do
+        local record_index = (ts - full_batch_to_write:start_time()) / TEST_INTERVAL + 1
+        local record = full_batch_to_write:get_record(record_index)
+        expected_partial_batch:add_record(record)
     end
-    df:read(read_batch, read_start_ts, read_end_ts)
-
-    local expected_binary = string.sub(batch_to_write:toBinary(),
-                                        (read_start_ts - start_ts) / TEST_INTERVAL * TEST_RECORD_SIZE + 1,
-                                        (read_end_ts - start_ts) / TEST_INTERVAL * TEST_RECORD_SIZE + TEST_RECORD_SIZE)
-    assert(expected_binary == read_batch.binary_data, "Read data mismatch for partial range")
+    compare_batches(expected_partial_batch, read_batch_obj, "test_read_partial_range")
 
     teardown()
 end
 
-function t_DataFile.test_read_beyond_file_boundaries()
+function test_case.test_read_beyond_file_boundaries()
     setup()
     local df = DataFile.new(TEST_FILE, TEST_BLOCK_SIZE, TEST_INTERVAL, TEST_RECORD_SIZE)
     df:create()
 
-    local start_ts = 1000
-    local end_ts = 1000 + TEST_INTERVAL * 4
+    local start_ts = 1000 * TEST_INTERVAL
     local count = 5
-    local batch_to_write = create_dummy_batch(start_ts, end_ts, count, TEST_RECORD_SIZE)
+    local batch_to_write = create_real_batch(start_ts, count)
     df:write(batch_to_write)
 
-    local read_batch = {}
-    function read_batch:fromBinary(binary_data)
-        self.binary_data = binary_data
-    end
+    local read_batch_obj = Batch.new(real_cols)
 
-    -- Read before start_time and after end_time
-    df:read(read_batch, start_ts - TEST_INTERVAL, end_ts + TEST_INTERVAL)
-    assert(batch_to_write:toBinary() == read_batch.binary_data, "Read data mismatch when reading beyond boundaries")
-
-    -- Read completely outside
-    read_batch.binary_data = nil
-    df:read(read_batch, end_ts + TEST_INTERVAL, end_ts + TEST_INTERVAL * 2)
-    assert(read_batch.binary_data == nil, "Should not read data when completely outside range")
+    df:read(read_batch_obj, start_ts - TEST_INTERVAL, batch_to_write:end_time() + TEST_INTERVAL)
+    compare_batches(batch_to_write, read_batch_obj, "test_read_beyond_file_boundaries_overlap")
 
     teardown()
 end
 
-function t_DataFile.test_count()
+function test_case.test_count()
     setup()
     local df = DataFile.new(TEST_FILE, TEST_BLOCK_SIZE, TEST_INTERVAL, TEST_RECORD_SIZE)
     df:create()
     assert(0 == df:count(), "Count should be 0 for empty file")
 
-    local start_ts = 1000
-    local end_ts = 1000 + TEST_INTERVAL * 4
+    local start_ts = 1000 * TEST_INTERVAL
     local count = 5
-    local batch_to_write = create_dummy_batch(start_ts, end_ts, count, TEST_RECORD_SIZE)
+    local batch_to_write = create_real_batch(start_ts, count)
     df:write(batch_to_write)
-    assert(count == df:count(), "Count mismatch after writing data")
+    assert(batch_to_write:count() == df:count(), "Count mismatch after writing data")
 
     teardown()
 end
 
-return t_DataFile
+return test_case
