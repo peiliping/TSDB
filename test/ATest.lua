@@ -1,21 +1,27 @@
 local test_cases = {
-    { require("test.t_Functions") },
-    { require("test.t_RingBuffer") },
-    { require("test.t_BitTools") },
-    { require("test.t_BinaryTools") },
-    { require("test.t_Record") },
-    { require("test.t_Batch") },
-    { require("test.t_DataFile") },
+    "test.t_Functions",
+    "test.t_RingBuffer",
+    "test.t_BitTools",
+    "test.t_BinaryTools",
+    "test.t_Record",
+    "test.t_Batch",
+    "test.t_DataFile",
 }
 
-for i, tc in ipairs(test_cases) do
-    print("Testing : " .. tc[2] .. "...")
-    for k, fc in pairs(tc[1]) do
+for _, module_name in ipairs(test_cases) do
+    local test_module = require(module_name)
+    print("Testing : " .. module_name .. "...")
+    local test_methods = {}
+    for k, fc in pairs(test_module) do
         if type(fc) == "function" and string.sub(k, 1, 4) == "test" then
-            print("test method : " .. k)
-            fc()
-            print("test result : Passed.")
+            table.insert(test_methods, k)
         end
+    end
+    table.sort(test_methods)
+    for _, method_name in ipairs(test_methods) do
+        print("test method : " .. method_name)
+        test_module[method_name]()
+        print("test result : Passed.")
     end
     print("--------------------------------------------------------------------------------")
 end
