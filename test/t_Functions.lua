@@ -1,4 +1,5 @@
 local Functions = require("aggregate.Functions")
+local TestTools = require("test.TestTools") -- Added
 
 local test_case = {}
 
@@ -41,14 +42,14 @@ function test_case.test_FS_parse_item()
     assert(type(mr_func.reduce) == "function")
 
     -- Test invalid expression format
-    local status, err = pcall(Functions.parse_item, "sum col1", mock_columns)
-    assert(not status)
-    assert(string.find(err, "Invalid expression: 'sum col1'."))
+    TestTools.assertErrorMsgContains("Invalid expression: 'sum col1'.", function() -- Changed
+        Functions.parse_item("sum col1", mock_columns)
+    end)
 
     -- Test unknown column
-    status, err = pcall(Functions.parse_item, "sum(col3)", mock_columns)
-    assert(not status)
-    assert(string.find(err, "Column index not found for name: col3"))
+    TestTools.assertErrorMsgContains("Column index not found for name: col3", function() -- Changed
+        Functions.parse_item("sum(col3)", mock_columns)
+    end)
 end
 
 return test_case

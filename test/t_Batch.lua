@@ -1,15 +1,11 @@
 local Batch = require("record.Batch")
 local Record = require("record.Record")
 local BitTools = require("tools.BitTools")
+local TestTools = require("test.TestTools") -- Added
 
 local test_case = {}
 
--- Helper function for asserting errors
-local function assertErrorMsgContains(expected_msg, func)
-    local success, err = pcall(func)
-    assert(not success, "Expected an error, but no error occurred.")
-    assert(string.find(err, expected_msg), "Error message '" .. err .. "' does not contain '" .. expected_msg .. "'")
-end
+-- Removed local assertErrorMsgContains function
 
 -- Mock Column object (reused from t_BinaryTools.lua)
 local MockColumn = {}
@@ -92,7 +88,7 @@ function test_case.test_Batch_new()
     local filtered_batch = Batch.new(mock_cols, true)
     assert(filtered_batch.filter_nil == true, "filter_nil should be true when specified")
 
-    assertErrorMsgContains("'columns' must be a table.", function()
+    TestTools.assertErrorMsgContains("'columns' must be a table.", function() -- Changed
         Batch.new(nil)
     end)
 end
@@ -134,7 +130,7 @@ function test_case.test_Batch_add_records()
 
     -- Test adding a record out of order
     local ts_out_of_order = ts1 + 30
-    assertErrorMsgContains("Data Time out of order.", function()
+    TestTools.assertErrorMsgContains("Data Time out of order.", function() -- Changed
         batch:add({ ts_out_of_order, 9.0 })
     end)
 
@@ -193,10 +189,10 @@ function test_case.test_Batch_get_record()
     assert(record2:getTimestamp() == ts + 60, "get_record(2) timestamp incorrect")
     assert(record2:get_value("value") == 11.0, "get_record(2) value incorrect")
 
-    assertErrorMsgContains("Index 0 is out of bounds", function()
+    TestTools.assertErrorMsgContains("Index 0 is out of bounds", function() -- Changed
         batch:get_record(0)
     end)
-    assertErrorMsgContains("Index 3 is out of bounds", function()
+    TestTools.assertErrorMsgContains("Index 3 is out of bounds", function() -- Changed
         batch:get_record(3)
     end)
 end

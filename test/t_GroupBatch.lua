@@ -1,14 +1,10 @@
 local Group = require("record.GroupBatch")
 local Record = require("record.Record") -- For type checking in mocks
+local TestTools = require("test.TestTools") -- Added
 
 local test_case = {}
 
--- Helper function for asserting errors
-local function assertErrorMsgContains(expected_msg, func)
-    local success, err = pcall(func)
-    assert(not success, "Expected an error, but no error occurred.")
-    assert(string.find(err, expected_msg), "Error message '" .. err .. "' does not contain '" .. expected_msg .. "'")
-end
+-- Removed local assertErrorMsgContains function
 
 -- Mock Column object (reused from previous tests)
 local MockColumn = {}
@@ -296,7 +292,7 @@ function test_case.test_Group_next_with_filter_nil()
     assert(rec2:get_value("value") == nil) -- This record is not fully nil, so it should pass filter
 
     local rec3 = group_with_filter:next()
-    assert(rec3 == nil, "Fully nil record should be filtered out")
+    TestTools.assert(rec3 == nil, "Fully nil record should be filtered out") -- Changed
 end
 
 -- Test for Group:next with empty range
@@ -309,7 +305,7 @@ function test_case.test_Group_next_empty_range()
     local end_time = 1000 -- start > end
 
     local group = Group.new(mock_data_table, start_time, end_time)
-    assert(group:next() == nil, "Should return nil immediately for empty range")
+    TestTools.assert(group:next() == nil, "Should return nil immediately for empty range") -- Changed
 end
 
 -- Test for Group:iterator

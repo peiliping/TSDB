@@ -1,15 +1,11 @@
 local BinaryTools = require("tools.BinaryTools")
 local Headers = require("db.Headers")
 local BitTools = require("tools.BitTools")
+local TestTools = require("test.TestTools") -- Added
 
-local test_case = {} -- Changed from BinaryToolsTest
+local test_case = {}
 
--- Helper function for asserting errors
-local function assertErrorMsgContains(expected_msg, func)
-    local success, err = pcall(func)
-    assert(not success, "Expected an error, but no error occurred.")
-    assert(string.find(err, expected_msg), "Error message '" .. err .. "' does not contain '" .. expected_msg .. "'")
-end
+-- Removed local assertErrorMsgContains function
 
 -- Test for pack_header and unpack_header
 function test_case.test_HeaderSerialization()
@@ -28,26 +24,26 @@ function test_case.test_HeaderSerialization()
 
     -- Test with invalid magic number
     local invalid_magic_header = string.pack(Headers.header_format, Headers.MAGIC + 1, interval, record_size, start_time, end_time, 0)
-    assertErrorMsgContains("invalid magic number.", function()
+    TestTools.assertErrorMsgContains("invalid magic number.", function() -- Changed
         BinaryTools.unpack_header(interval, record_size, invalid_magic_header)
     end)
 
     -- Test with invalid interval
     local invalid_interval_header = string.pack(Headers.header_format, Headers.MAGIC, interval + 1, record_size, start_time, end_time, 0)
-    assertErrorMsgContains("invalid interval.", function()
+    TestTools.assertErrorMsgContains("invalid interval.", function() -- Changed
         BinaryTools.unpack_header(interval, record_size, invalid_interval_header)
     end)
 
     -- Test with invalid record size
     local invalid_record_size_header = string.pack(Headers.header_format, Headers.MAGIC, interval, record_size + 1, start_time, end_time, 0)
-    assertErrorMsgContains("invalid record size.", function()
+    TestTools.assertErrorMsgContains("invalid record size.", function() -- Changed
         BinaryTools.unpack_header(interval, record_size, invalid_record_size_header)
     end)
 
     -- Test with invalid crc32 (by modifying end_time in packed header)
     local original_crc = select(6, string.unpack(Headers.header_format, packed_header)) -- Get original crc
     local modified_header = string.pack(Headers.header_format, Headers.MAGIC, interval, record_size, start_time, end_time + 1, original_crc)
-    assertErrorMsgContains("invalid crc32", function()
+    TestTools.assertErrorMsgContains("invalid crc32", function() -- Changed
         BinaryTools.unpack_header(interval, record_size, modified_header)
     end)
 end

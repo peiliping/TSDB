@@ -1,15 +1,11 @@
 local Record = require("record.Record")
 local BitTools = require("tools.BitTools")
 local BinaryTools = require("tools.BinaryTools")
+local TestTools = require("test.TestTools") -- Added
 
 local test_case = {}
 
--- Helper function for asserting errors
-local function assertErrorMsgContains(expected_msg, func)
-    local success, err = pcall(func)
-    assert(not success, "Expected an error, but no error occurred.")
-    assert(string.find(err, expected_msg), "Error message '" .. err .. "' does not contain '" .. expected_msg .. "'")
-end
+-- Removed local assertErrorMsgContains function
 
 -- Mock Column object (reused from t_BinaryTools.lua)
 local MockColumn = {}
@@ -97,18 +93,18 @@ function test_case.test_Record_new()
     assert(record_auto_nil.nil_flags == explicit_nil_flags, "nil_flags should be auto-calculated correctly")
 
     -- Test invalid columns
-    assertErrorMsgContains("'columns' must be an a table.", function()
+    TestTools.assertErrorMsgContains("'columns' must be an a table.", function() -- Changed
         Record.new(nil, data)
     end)
 
     -- Test invalid data_list
-    assertErrorMsgContains("'data_list' must be a table.", function()
+    TestTools.assertErrorMsgContains("'data_list' must be a table.", function() -- Changed
         Record.new(mock_cols, nil)
     end)
 
     -- Test column count mismatch
     local data_too_many = { 123, 45.6, 789 }
-    assertErrorMsgContains("Column definition count does not match data value count.", function()
+    TestTools.assertErrorMsgContains("Column definition count does not match data value count.", function() -- Changed
         Record.new(mock_cols, data_too_many)
     end)
 end
@@ -177,17 +173,17 @@ function test_case.test_data_access()
     -- get_value
     assert(record:get_value("temperature") == 25.5, "get_value should return correct value by name")
     assert(record:get_value("humidity") == 60, "get_value should return correct value by name")
-    assertErrorMsgContains("Column not found: non_existent", function()
+    TestTools.assertErrorMsgContains("Column not found: non_existent", function() -- Changed
         record:get_value("non_existent")
     end)
 
     -- get_value_by_index
     assert(record:get_value_by_index(1) == timestamp, "get_value_by_index should return correct value")
     assert(record:get_value_by_index(2) == 25.5, "get_value_by_index should return correct value")
-    assertErrorMsgContains("Index 0 is out of bounds", function()
+    TestTools.assertErrorMsgContains("Index 0 is out of bounds", function() -- Changed
         record:get_value_by_index(0)
     end)
-    assertErrorMsgContains("Index 4 is out of bounds", function()
+    TestTools.assertErrorMsgContains("Index 4 is out of bounds", function() -- Changed
         record:get_value_by_index(4)
     end)
 
@@ -213,10 +209,10 @@ function test_case.test_data_access()
     assert(record:get_value_by_index(3) == nil, "set_value_by_index should set to nil")
     assert(record:is_column_nil_by_index(3), "humidity should be nil after setting nil")
 
-    assertErrorMsgContains("Index 0 is out of bounds", function()
+    TestTools.assertErrorMsgContains("Index 0 is out of bounds", function() -- Changed
         record:set_value_by_index(0, 10)
     end)
-    assertErrorMsgContains("Index 4 is out of bounds", function()
+    TestTools.assertErrorMsgContains("Index 4 is out of bounds", function() -- Changed
         record:set_value_by_index(4, 10)
     end)
 end
