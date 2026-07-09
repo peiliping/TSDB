@@ -10,8 +10,7 @@ NumberCol.__index = NumberCol
 setmetatable(NumberCol, { __index = BaseCol })
 
 function NumberCol.new(name, type_name, precision, signed)
-    local self = BaseCol.new(name, type_name)
-    setmetatable(self, NumberCol)
+    local self = setmetatable(BaseCol.new(name, type_name), NumberCol)
     self.precision = precision or 0
     if self.precision > self.type_def.max_precision then
         error(string.format("Precision (%d) for column '%s' of type '%s' exceeds its max_precision (%d).",

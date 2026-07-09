@@ -14,8 +14,7 @@ local DataFile = {
 DataFile.__index = DataFile
 
 function DataFile.new(path, block_size, interval, record_size)
-    local self = {}
-    setmetatable(self, DataFile)
+    local self = setmetatable({}, DataFile)
     self.file_path = path
     self.file_block_size = block_size
     self.interval = interval

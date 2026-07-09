@@ -11,8 +11,7 @@ local Columns = {
 Columns.__index = Columns
 
 function Columns.new(columns_list)
-    local self = {}
-    setmetatable(self, Columns)
+    local self = setmetatable({}, Columns)
     if not columns_list or type(columns_list) ~= "table" then
         error("Columns.new: 'columns_list' must be a table.")
     end

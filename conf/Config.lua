@@ -8,8 +8,7 @@ local TABLE_CONFIG = {
 TABLE_CONFIG.__index = TABLE_CONFIG
 
 function TABLE_CONFIG.new(columns, block_size)
-    local self = {}
-    setmetatable(self, TABLE_CONFIG)
+    local self = setmetatable({}, TABLE_CONFIG)
     self.columns = columns
     self.block_size = (block_size or 4 * 1024 * 1024)
     return self

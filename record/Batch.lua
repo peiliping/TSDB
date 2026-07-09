@@ -12,8 +12,7 @@ local Batch = {
 Batch.__index = Batch
 
 function Batch.new(columns, filter_nil)
-    local self = {}
-    setmetatable(self, Batch)
+    local self = setmetatable({}, Batch)
     if not columns or type(columns) ~= "table" then
         error("Batch.new: 'columns' must be a table.")
     end

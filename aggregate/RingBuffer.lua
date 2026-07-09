@@ -7,8 +7,7 @@ local RingBuffer = {
 RingBuffer.__index = RingBuffer
 
 function RingBuffer.new(max_size)
-    local self = {}
-    setmetatable(self, RingBuffer)
+    local self = setmetatable({}, RingBuffer)
     if not max_size or max_size <= 0 then
         error("max_size must be positive.")
     end

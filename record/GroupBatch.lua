@@ -14,8 +14,7 @@ local Group = {
 Group.__index = Group
 
 function Group.new(data_table, start_time, end_time, records_per_batch, filter_nil)
-    local self = {}
-    setmetatable(self, Group)
+    local self = setmetatable({}, Group)
     self.data_table = data_table
     self.interval = data_table.interval
     self.total_start = start_time

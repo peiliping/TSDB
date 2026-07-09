@@ -10,8 +10,7 @@ local Column = {
 Column.__index = Column
 
 function Column.new(name, type_name)
-    local self = {}
-    setmetatable(self, Column)
+    local self = setmetatable({}, Column)
     self.name = name
     self.type_name = type_name
     self.type_def = Types.get(type_name)

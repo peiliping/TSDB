@@ -1,10 +1,8 @@
 local Group = require("record.GroupBatch")
 local Record = require("record.Record") -- For type checking in mocks
-local TestTools = require("test.TestTools") -- Added
+local TestTools = require("test.TestTools")
 
 local test_case = {}
-
--- Removed local assertErrorMsgContains function
 
 -- Mock Column object (reused from previous tests)
 local MockColumn = {}
@@ -223,13 +221,6 @@ function test_case.test_Group_next_multiple_batches()
             records = {
                 { data = { ts_base, 100 }, nil_flags = 0 },
                 { data = { ts_base + 60, 110 }, nil_flags = 0 },
-            }
-        },
-        [ts_base + 120] = { -- Note the gap, query_records will be called for ts_base + 120
-            end_time = ts_base + 180, -- 2 records
-            records = {
-                { data = { ts_base + 120, 120 }, nil_flags = 0 },
-                { data = { ts_base + 180, 130 }, nil_flags = 0 },
             }
         }
     }

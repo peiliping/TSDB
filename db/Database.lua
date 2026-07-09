@@ -13,8 +13,7 @@ local function get_file_path(root_path, table_name)
 end
 
 function DB.new(root_path, v_table_name)
-    local self = {}
-    setmetatable(self, DB)
+    local self = setmetatable({}, DB)
     self.root_path = root_path
     self.data_tables = {}
     for table_name, config in pairs(Config) do
@@ -47,4 +46,3 @@ function DB:scan_tables_stat()
 end
 
 return DB
-

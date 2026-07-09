@@ -9,8 +9,7 @@ local Record = {
 Record.__index = Record
 
 function Record.new(columns, data_list, nil_flags)
-    local self = {}
-    setmetatable(self, Record)
+    local self = setmetatable({}, Record)
     if not columns or type(columns) ~= "table" then
         error("Record.new: 'columns' must be an a table.")
     end

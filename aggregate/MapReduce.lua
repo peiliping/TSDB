@@ -16,8 +16,7 @@ local DEFAULT_REDUCE = function(tmp_result, column_datas)
 end
 
 function MR.new(column_id, column_name, map, reduce)
-    local self = {}
-    setmetatable(self, MR)
+    local self = setmetatable({}, MR)
     self.column_id = column_id
     self.column_name = column_name
     self.map = map or DEFAULT_MAP

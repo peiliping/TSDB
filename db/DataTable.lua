@@ -39,8 +39,7 @@ local function config_to_cols(config)
 end
 
 function DataTable.new(name, config, file_path)
-    local self = {}
-    setmetatable(self, DataTable)
+    local self = setmetatable({}, DataTable)
     self.name = name
     self.columns = Columns.new(config_to_cols(config))
     self.data_file = DataFile.new(file_path, config.block_size,
@@ -135,7 +134,8 @@ function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_fun
             table.insert(result, agg_record)
             last_agg_time = cur_agg_time
         end
-        for i, mr in ipairs(mr_functions) do
+        for i = 1, #mr_functions do
+            local mr = mr_functions[i]
             agg_record[i + 1] = mr.map(agg_record[i + 1], record:get_value_by_index(mr.column_id))
         end
     end
@@ -164,7 +164,8 @@ function DataTable:query_agg_sliding(start_time, end_time, slidingSize, mr_funct
             local agg_record = { record:getTimestamp() }
             table.insert(result, agg_record)
             for i = 1, slidingSize do
-                for k, mr in ipairs(mr_functions) do
+                for k = 1, #mr_functions do
+                    local mr = mr_functions[k]
                     agg_record[k + 1] = mr.map(agg_record[k + 1], column_datas[mr.column_id]:get(i))
                 end
             end

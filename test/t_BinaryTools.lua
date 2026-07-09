@@ -1,11 +1,9 @@
 local BinaryTools = require("tools.BinaryTools")
 local Headers = require("db.Headers")
 local BitTools = require("tools.BitTools")
-local TestTools = require("test.TestTools") -- Added
+local TestTools = require("test.TestTools")
 
 local test_case = {}
-
--- Removed local assertErrorMsgContains function
 
 -- Test for pack_header and unpack_header
 function test_case.test_HeaderSerialization()

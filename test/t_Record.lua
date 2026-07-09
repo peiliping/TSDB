@@ -5,8 +5,6 @@ local TestTools = require("test.TestTools") -- Added
 
 local test_case = {}
 
--- Removed local assertErrorMsgContains function
-
 -- Mock Column object (reused from t_BinaryTools.lua)
 local MockColumn = {}
 function MockColumn:new(name, format, size)
