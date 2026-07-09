@@ -4,7 +4,7 @@ local test_cases = {
     { require("test.t_BitTools") },
     { require("test.t_BinaryTools") },
     { require("test.t_Record") },
-    --{ require("test.t_Batch") },
+    { require("test.t_Batch") },
     --{ require("test.t_GroupBatch") },
     --TODO @db
 }
