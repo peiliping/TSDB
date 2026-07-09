@@ -13,7 +13,7 @@ function B.pack_header(interval, record_size, start_time, end_time)
     return string.pack(Headers.header_format, Headers.MAGIC, interval, record_size, start_time, end_time, crc)
 end
 
-function B.unpack_header(_interval, _record_size, header_bin)
+function B.unpack_header(header_bin, _interval, _record_size)
     local magic, interval, record_size, start_time, end_time, crc = string.unpack(Headers.header_format, header_bin)
     if Headers.MAGIC ~= magic then
         error("invalid magic number.")
@@ -30,18 +30,18 @@ function B.unpack_header(_interval, _record_size, header_bin)
     return start_time, end_time
 end
 
-function B.pack_record_data(columns, data_list, nil_flags, packed_data)
-    if not packed_data then
-        packed_data = {}
+function B.pack_record_data(columns, data_list, nil_flags, _cache)
+    if not _cache then
+        _cache = {}
     end
     for i, col in ipairs(columns.cols) do
         if BitTools.check_bit(nil_flags, i - 1) then
-            packed_data[i] = 0
+            _cache[i] = 0
         else
-            packed_data[i] = col:pack_value(data_list[i])
+            _cache[i] = col:pack_value(data_list[i])
         end
     end
-    return string.pack(columns.format_string, nil_flags, table.unpack(packed_data))
+    return string.pack(columns.format_string, nil_flags, table.unpack(_cache))
 end
 
 function B.unpack_record_data(columns, record_binary, offset)

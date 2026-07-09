@@ -92,7 +92,7 @@ function t_DataFile.test_write_single_batch_to_empty_file()
     -- Verify file content and header
     local f = io.open(TEST_FILE, "rb")
     local header_binary = f:read(Headers.header_length)
-    local file_start_time, file_end_time = BinaryTools.unpack_header(TEST_INTERVAL, TEST_RECORD_SIZE, header_binary)
+    local file_start_time, file_end_time = BinaryTools.unpack_header(header_binary, TEST_INTERVAL, TEST_RECORD_SIZE)
     assert(start_ts == file_start_time, "Header start_time mismatch")
     assert(end_ts == file_end_time, "Header end_time mismatch")
 

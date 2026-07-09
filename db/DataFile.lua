@@ -57,7 +57,7 @@ function DataFile:load()
     local binary = f:read(Headers.header_length)
     self.file_size = f:seek("end")
     f:close()
-    local start_time, end_time = BinaryTools.unpack_header(self.interval, self.record_size, binary)
+    local start_time, end_time = BinaryTools.unpack_header(binary, self.interval, self.record_size)
     self.start_time = start_time
     self.end_time = end_time
 end
