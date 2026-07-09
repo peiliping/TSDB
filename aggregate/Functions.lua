@@ -22,22 +22,26 @@ local FS = {
             end
         },
         lr = {
-            reduce = function(_, rb)
-                local size = rb:size()
-                local sumx = 0
-                local sumy = 0
-                local sumxx = 0
-                local sumxy = 0
-                for i = 1, size do
-                    local v = rb:get(i)
-                    sumx = sumx + i
-                    sumy = sumy + v
-                    sumxx = sumxx + i * i
-                    sumxy = sumxy + i * v
+            map = function(cache, v)
+                if not cache then
+                    cache = {sumx = 0, sumy = 0, sumxx = 0, sumxy = 0, seq = 0}
                 end
+                cache.seq = cache.seq + 1
+                cache.sumx = cache.sumx + cache.seq
+                cache.sumy = cache.sumy + v
+                cache.sumxx = cache.sumxx + cache.seq * cache.seq
+                cache.sumxy = cache.sumxy + cache.seq * v
+                return cache
+            end,
+            reduce = function(cache, rb)
+                local size = rb:size()
                 if size < 2 then
                     return { 0, 0 }
                 end
+                local sumx = cache.sumx
+                local sumy = cache.sumy
+                local sumxx = cache.sumxx
+                local sumxy = cache.sumxy
                 local slope = (size * sumxy - sumx * sumy) / (size * sumxx - sumx * sumx)
                 local intercept = sumy / size - slope * sumx / size + slope
                 local stdDevAcc = 0
