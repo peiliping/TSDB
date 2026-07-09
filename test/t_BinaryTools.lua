@@ -2,10 +2,11 @@ local BinaryTools = require("tools.BinaryTools")
 local Headers = require("db.Headers")
 local BitTools = require("tools.BitTools")
 local TestTools = require("test.TestTools")
+local NumberCol = require("record.col.NumberCol")
+local Types = require("record.col.Types")
 
 local test_case = {}
 
--- Test for pack_header and unpack_header
 function test_case.test_HeaderSerialization()
     local interval = 60
     local record_size = 16
@@ -22,68 +23,45 @@ function test_case.test_HeaderSerialization()
 
     -- Test with invalid magic number
     local invalid_magic_header = string.pack(Headers.header_format, Headers.MAGIC + 1, interval, record_size, start_time, end_time, 0)
-    TestTools.assertErrorMsgContains("invalid magic number.", function() -- Changed
+    TestTools.assertErrorMsgContains("invalid magic number.", function()
         BinaryTools.unpack_header(invalid_magic_header, interval, record_size)
     end)
 
     -- Test with invalid interval
     local invalid_interval_header = string.pack(Headers.header_format, Headers.MAGIC, interval + 1, record_size, start_time, end_time, 0)
-    TestTools.assertErrorMsgContains("invalid interval.", function() -- Changed
+    TestTools.assertErrorMsgContains("invalid interval.", function()
         BinaryTools.unpack_header(invalid_interval_header, interval, record_size)
     end)
 
     -- Test with invalid record size
     local invalid_record_size_header = string.pack(Headers.header_format, Headers.MAGIC, interval, record_size + 1, start_time, end_time, 0)
-    TestTools.assertErrorMsgContains("invalid record size.", function() -- Changed
+    TestTools.assertErrorMsgContains("invalid record size.", function()
         BinaryTools.unpack_header(invalid_record_size_header, interval, record_size)
     end)
 
     -- Test with invalid crc32 (by modifying end_time in packed header)
-    local original_crc = select(6, string.unpack(Headers.header_format, packed_header)) -- Get original crc
+    local original_crc = select(6, string.unpack(Headers.header_format, packed_header))
     local modified_header = string.pack(Headers.header_format, Headers.MAGIC, interval, record_size, start_time, end_time + 1, original_crc)
-    TestTools.assertErrorMsgContains("invalid crc32", function() -- Changed
+    TestTools.assertErrorMsgContains("invalid crc32", function()
         BinaryTools.unpack_header(modified_header, interval, record_size)
     end)
 end
 
--- Mock Column object for record serialization tests
-local MockColumn = {}
-function MockColumn:new(name, format, size)
-    local o = {
-        name = name,
-        format = format,
-        size = size,
-    }
-    setmetatable(o, self)
-    self.__index = self
-    return o
+-- Helper function to get the raw format string of a column (without endianness prefix)
+local function get_raw_format_specifier(col)
+    local format_str = col.signed and col.type_def.format_signed or col.type_def.format_unsigned
+    return format_str:sub(2) -- Remove "<" or ">" prefix
 end
 
-function MockColumn:pack_value(value)
-    if self.format == "i4" then
-        -- integer
-        return value
-    elseif self.format == "f4" then
-        -- float
-        return value
-    else
-        return value -- default for other types
-    end
-end
-
-function MockColumn:unpack_value(value)
-    return value
-end
-
--- Test for pack_record_data and unpack_record_data
 function test_case.test_RecordSerialization()
-    local col1 = MockColumn:new("col1", "I4", 4)
-    local col2 = MockColumn:new("col2", "f", 4)
-    local col3 = MockColumn:new("col3", "I4", 4)
+    local col1 = NumberCol.new("col1", "number", 0, false) -- I4, integer
+    local col2 = NumberCol.new("col2", "number", 2, false) -- f (simulating fixed-precision float), 2 decimal places
+    local col3 = NumberCol.new("col3", "number", 0, false) -- I4, integer
 
     local mock_columns = {
         cols = { col1, col2, col3 },
-        format_string = "<I4" .. col1.format .. col2.format .. col3.format,
+        -- Dynamically construct format_string, nil_flags is always I4
+        format_string = "<I4" .. get_raw_format_specifier(col1) .. get_raw_format_specifier(col2) .. get_raw_format_specifier(col3),
     }
 
     local data_list = { 123, 45.67, 789 }
@@ -95,6 +73,8 @@ function test_case.test_RecordSerialization()
     local unpacked_data, unpacked_nil_flags = BinaryTools.unpack_record_data(mock_columns, packed_record, 1)
     assert(nil_flags == unpacked_nil_flags, "nil_flags should match unpacked_nil_flags")
     assert(data_list[1] == unpacked_data[1], "data_list[1] should match unpacked_data[1]")
+    -- Floating point comparison needs tolerance
+    assert(math.abs(data_list[2] - unpacked_data[2]) < 0.001, "data_list[2] should match unpacked_data[2] within tolerance")
     assert(data_list[3] == unpacked_data[3], "data_list[3] should match unpacked_data[3]")
 
     -- Test with nil values
