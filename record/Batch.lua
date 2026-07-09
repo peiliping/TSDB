@@ -27,6 +27,9 @@ function Batch:add(data, nil_flags)
     if not nil_flags then
         nil_flags = BitTools.calculate_nil_flags(data, self.columns:count())
     end
+    if data[1] % self.columns:get_interval() ~= 0 then
+        error("Data Time not match interval.")
+    end
     if self.filter_nil then
         if self.columns.nil_record_flags == nil_flags then
             return

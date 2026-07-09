@@ -26,8 +26,8 @@ local TEST_CONFIG = {
     block_size = TEST_BLOCK_SIZE,
     columns = {
         { name = "time", type = "timestamp", interval = TEST_INTERVAL },
-        { name = "value1", type = "number", precision = 0, signed = true }, -- Changed from 'int' to 'number'
-        { name = "value2", type = "number", precision = 2, signed = false }, -- Changed from 'float' to 'number'
+        { name = "value1", type = "number", precision = 0, signed = true },
+        { name = "value2", type = "number", precision = 2, signed = false },
     }
 }
 
@@ -80,13 +80,13 @@ function t_DataTable.test_new_initialized()
     -- Create the file first to simulate an existing file
     local columns_obj = Columns.new({
         TimeCol.new("time", TEST_INTERVAL),
-        NumberCol.new("value1", "number"), -- Changed from 'int' to 'number'
-        NumberCol.new("value2", "number", 2) -- Changed from 'float' to 'number'
+        NumberCol.new("value1", "number"),
+        NumberCol.new("value2", "number", 2)
     })
     local df = DataFile.new(TEST_FILE_PATH, TEST_BLOCK_SIZE, columns_obj:get_interval(), columns_obj.record_size)
     df:create()
 
-    local start_ts = 1000
+    local start_ts = 1200
     local count = 5
     local batch_to_write = create_real_batch(columns_obj, start_ts, count)
     df:write(batch_to_write)
@@ -146,7 +146,7 @@ function t_DataTable.test_write_records_first_batch()
     local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
     dt:create()
 
-    local start_ts = 1000
+    local start_ts = 1200
     local count = 3
     local batch = create_real_batch(dt.columns, start_ts, count, function(i, ts) return {i + 1, (i + 1) + 0.1} end)
 
@@ -162,7 +162,7 @@ function t_DataTable.test_write_records_with_gap()
     local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
     dt:create()
 
-    local start_ts1 = 1000
+    local start_ts1 = 1200
     local count1 = 2
     local batch1 = create_real_batch(dt.columns, start_ts1, count1, function(i, ts) return {i + 1, (i + 1) + 0.1} end)
     dt:write_records(batch1)
@@ -173,10 +173,6 @@ function t_DataTable.test_write_records_with_gap()
     local batch2 = create_real_batch(dt.columns, start_ts2, count2, function(i, ts) return {i + 4, (i + 4) + 0.4} end)
 
     local written = dt:write_records(batch2)
-    -- batch1 (2 records) + 2 blank records + batch2 (2 records) = 6 records total written to file
-    -- DataFile:write returns batch:count() for the current batch, plus any blank records written.
-    -- The `write_records` function in DataTable writes blanks then the actual batch.
-    -- The return value is the sum of records written by DataFile.
     assert(written == count2 + 2, "Should write " .. (count2 + 2) .. " records (2 blanks + 2 actual)")
     assert(dt.data_file.start_time == start_ts1, "DataFile start_time mismatch after gap write")
     assert(dt.data_file.end_time == start_ts2 + (count2 - 1) * TEST_INTERVAL, "DataFile end_time mismatch after gap write")
@@ -188,7 +184,7 @@ function t_DataTable.test_query_records()
     local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
     dt:create()
 
-    local start_ts = 1000
+    local start_ts = 1200
     local count = 5
     local batch_to_write = create_real_batch(dt.columns, start_ts, count, function(i, ts) return {i + 1, (i + 1) + 0.1} end)
     dt:write_records(batch_to_write)
@@ -210,7 +206,7 @@ function t_DataTable.test_query_group()
     local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
     dt:create()
 
-    local start_ts = 1000
+    local start_ts = 1200
     local end_ts = start_ts + TEST_INTERVAL * 5
     local group_batch = dt:query_group(start_ts, end_ts, 10, false)
 
@@ -228,7 +224,7 @@ function t_DataTable.test_query_agg_tumbling()
     local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
     dt:create()
 
-    local start_ts = 1000
+    local start_ts = 1200
     local count = 10
     local end_ts = start_ts + (count - 1) * TEST_INTERVAL
     -- Write some dummy data
@@ -243,39 +239,26 @@ function t_DataTable.test_query_agg_tumbling()
 
     local results = dt:query_agg_tumbling(start_ts, end_ts, agg_interval, mr_functions)
 
-    assert(#results == 4, "Tumbling agg results count mismatch") -- 10 records / 3 interval = 3.33 -> 4 windows
+    assert(#results == 4, "Tumbling agg results count mismatch")
 
-    -- Expected results based on actual data:
-    -- Records: (ts, value1, value2)
-    -- (1000, 1, 1.1), (1060, 2, 2.1), (1120, 3, 3.1), (1180, 4, 4.1), (1240, 5, 5.1),
-    -- (1300, 6, 6.1), (1360, 7, 7.1), (1420, 8, 8.1), (1480, 9, 9.1), (1540, 10, 10.1)
+    -- Window 1 (aligned to 1080): Records: (1200,1,1.1)
+    assert(results[1][1] == 1080, "Tumbling agg result 1 timestamp mismatch")
+    assert(results[1][2] == 1, "Tumbling agg result 1 sum mismatch")
+    assert(results[1][3] == 1.1, "Tumbling agg result 1 max mismatch")
 
-    -- Window 1 (1000-1120): (1000,1,1.1), (1060,2,2.1), (1120,3,3.1)
-    -- Sum(value1): 1+2+3 = 6
-    -- Max(value2): max(1.1,2.1,3.1) = 3.1
-    assert(results[1][1] == 1000, "Tumbling agg result 1 timestamp mismatch")
-    assert(results[1][2] == 6, "Tumbling agg result 1 sum mismatch")
-    assert(results[1][3] == 3.1, "Tumbling agg result 1 max mismatch")
+    -- Window 2 (aligned to 1260): Records: (1260,2,2.1), (1320,3,3.1), (1380,4,4.1)
+    assert(results[2][1] == 1260, "Tumbling agg result 2 timestamp mismatch")
+    assert(results[2][2] == 9, "Tumbling agg result 2 sum mismatch")
+    assert(results[2][3] == 4.1, "Tumbling agg result 2 max mismatch")
 
-    -- Window 2 (1180-1300): (1180,4,4.1), (1240,5,5.1), (1300,6,6.1)
-    -- Sum(value1): 4+5+6 = 15
-    -- Max(value2): max(4.1,5.1,6.1) = 6.1
-    assert(results[2][1] == 1180, "Tumbling agg result 2 timestamp mismatch")
-    assert(results[2][2] == 15, "Tumbling agg result 2 sum mismatch")
-    assert(results[2][3] == 6.1, "Tumbling agg result 2 max mismatch")
+    -- Window 3 (aligned to 1440): Records: (1440,5,5.1), (1500,6,6.1), (1560,7,7.1)
+    assert(results[3][1] == 1440, "Tumbling agg result 3 timestamp mismatch")
+    assert(results[3][2] == 18, "Tumbling agg result 3 sum mismatch")
+    assert(results[3][3] == 7.1, "Tumbling agg result 3 max mismatch")
 
-    -- Window 3 (1360-1480): (1360,7,7.1), (1420,8,8.1), (1480,9,9.1)
-    -- Sum(value1): 7+8+9 = 24
-    -- Max(value2): max(7.1,8.1,9.1) = 9.1
-    assert(results[3][1] == 1360, "Tumbling agg result 3 timestamp mismatch")
-    assert(results[3][2] == 24, "Tumbling agg result 3 sum mismatch")
-    assert(results[3][3] == 9.1, "Tumbling agg result 3 max mismatch")
-
-    -- Window 4 (1540-1540): (1540,10,10.1)
-    -- Sum(value1): 10 = 10
-    -- Max(value2): max(10.1) = 10.1
-    assert(results[4][1] == 1540, "Tumbling agg result 4 timestamp mismatch")
-    assert(results[4][2] == 10, "Tumbling agg result 4 sum mismatch")
+    -- Window 4 (aligned to 1620): Records: (1620,8,8.1), (1680,9,9.1), (1740,10,10.1)
+    assert(results[4][1] == 1620, "Tumbling agg result 4 timestamp mismatch")
+    assert(results[4][2] == 27, "Tumbling agg result 4 sum mismatch")
     assert(results[4][3] == 10.1, "Tumbling agg result 4 max mismatch")
 
     teardown()
@@ -286,7 +269,7 @@ function t_DataTable.test_query_agg_sliding()
     local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
     dt:create()
 
-    local start_ts = 1000
+    local start_ts = 1200
     local count = 10
     local end_ts = start_ts + (count - 1) * TEST_INTERVAL
     -- Write some dummy data
@@ -298,40 +281,27 @@ function t_DataTable.test_query_agg_sliding()
         { column_id = 2, map = function(acc, val) return (acc or 0) + val end, reduce = function(acc) return acc end }, -- Sum of value1
         { column_id = 3, map = function(acc, val) return math.max(acc or 0, val) end, reduce = function(acc) return acc end }, -- Max of value2
     }
-
     local results = dt:query_agg_sliding(start_ts, end_ts, slidingSize, mr_functions)
 
-    assert(#results == 8, "Sliding agg results count mismatch") -- 10 records, sliding size 3 -> 10 - 3 + 1 = 8 results
+    assert(#results == 8, "Sliding agg results count mismatch")
 
-    -- Records: (ts, value1, value2)
-    -- (1000, 1, 1.1), (1060, 2, 2.1), (1120, 3, 3.1), (1180, 4, 4.1), (1240, 5, 5.1),
-    -- (1300, 6, 6.1), (1360, 7, 7.1), (1420, 8, 8.1), (1480, 9, 9.1), (1540, 10, 10.1)
-
-    -- Window 1 (records at 1000, 1060, 1120):
-    -- value1: 1, 2, 3. Sum = 6
-    -- value2: 1.1, 2.1, 3.1. Max = 3.1
-    assert(results[1][1] == 1120, "Sliding agg result 1 timestamp mismatch")
+    -- Window 1 (records at 1200, 1260, 1320):
+    assert(results[1][1] == 1320, "Sliding agg result 1 timestamp mismatch")
     assert(results[1][2] == 6, "Sliding agg result 1 sum mismatch")
     assert(results[1][3] == 3.1, "Sliding agg result 1 max mismatch")
 
-    -- Window 2 (records at 1060, 1120, 1180):
-    -- value1: 2, 3, 4. Sum = 9
-    -- value2: 2.1, 3.1, 4.1. Max = 4.1
-    assert(results[2][1] == 1180, "Sliding agg result 2 timestamp mismatch")
+    -- Window 2 (records at 1260, 1320, 1380):
+    assert(results[2][1] == 1380, "Sliding agg result 2 timestamp mismatch")
     assert(results[2][2] == 9, "Sliding agg result 2 sum mismatch")
     assert(results[2][3] == 4.1, "Sliding agg result 2 max mismatch")
 
-    -- Window 3 (records at 1120, 1180, 1240):
-    -- value1: 3, 4, 5. Sum = 12
-    -- value2: 3.1, 4.1, 5.1. Max = 5.1
-    assert(results[3][1] == 1240, "Sliding agg result 3 timestamp mismatch")
+    -- Window 3 (records at 1320, 1380, 1440):
+    assert(results[3][1] == 1440, "Sliding agg result 3 timestamp mismatch")
     assert(results[3][2] == 12, "Sliding agg result 3 sum mismatch")
     assert(results[3][3] == 5.1, "Sliding agg result 3 max mismatch")
 
-    -- Window 8 (records at 1420, 1480, 1540):
-    -- value1: 8, 9, 10. Sum = 27
-    -- value2: 8.1, 9.1, 10.1. Max = 10.1
-    assert(results[8][1] == 1540, "Sliding agg result 8 timestamp mismatch")
+    -- Window 8 (records at 1620, 1680, 1740):
+    assert(results[8][1] == 1740, "Sliding agg result 8 timestamp mismatch")
     assert(results[8][2] == 27, "Sliding agg result 8 sum mismatch")
     assert(results[8][3] == 10.1, "Sliding agg result 8 max mismatch")
 

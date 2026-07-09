@@ -1,15 +1,16 @@
 local Batch = require("record.Batch")
 local Record = require("record.Record")
 local BitTools = require("tools.BitTools")
-local TestTools = require("test.TestTools") -- Added
+local TestTools = require("test.TestTools")
 
 local test_case = {}
 
 -- Mock Column object (reused from t_BinaryTools.lua)
 local MockColumn = {}
-function MockColumn:new(name, format, size)
+function MockColumn:new(name, type_name, format, size) -- Added type_name
     local o = {
         name = name,
+        type_name = type_name, -- Added
         format = format,
         size = size,
     }
@@ -19,14 +20,12 @@ function MockColumn:new(name, format, size)
 end
 
 function MockColumn:pack_value(value)
-    if self.format == "I4" then
-        -- integer
-        return value or 0 -- Pack nil as 0 for integer types
-    elseif self.format == "f" then
-        -- float
-        return value or 0.0 -- Pack nil as 0.0 for float types
+    if self.type_name == "timestamp" then -- Use type_name for packing logic
+        return value or 0
+    elseif self.type_name == "number" then
+        return value or 0.0
     else
-        return value -- default for other types
+        return value
     end
 end
 
@@ -43,6 +42,7 @@ function MockColumns:new(cols_definition, interval)
         nil_record_flags = 0,
         format_string = "I", -- Assuming nil_flags is an unsigned int
         interval = interval or 60, -- Default interval
+        record_size = 0, -- Calculate record_size
     }
     setmetatable(o, self)
     self.__index = self
@@ -50,6 +50,7 @@ function MockColumns:new(cols_definition, interval)
     for i, col in ipairs(cols_definition) do
         o.name_to_index[col.name] = i
         o.format_string = o.format_string .. col.format
+        o.record_size = o.record_size + col.size -- Accumulate record size
     end
     o.nil_record_flags = BitTools.calculate_nil_record_flags(#cols_definition)
     return o
@@ -67,14 +68,22 @@ function MockColumns:get_index_by_name(name)
     return index
 end
 
+function MockColumns:get_by_index(index) -- Added get_by_index
+    local col = self.cols[index]
+    if not col then
+        error("Column not found at index: " .. tostring(index))
+    end
+    return col
+end
+
 function MockColumns:get_interval()
     return self.interval
 end
 
 -- Test for Batch.new
 function test_case.test_Batch_new()
-    local col1 = MockColumn:new("timestamp", "I4", 4)
-    local col2 = MockColumn:new("value", "f", 4)
+    local col1 = MockColumn:new("timestamp", "timestamp", "I4", 4) -- Added type_name
+    local col2 = MockColumn:new("value", "number", "f", 4) -- Added type_name
     local mock_cols = MockColumns:new({ col1, col2 })
 
     local batch = Batch.new(mock_cols)
@@ -88,21 +97,22 @@ function test_case.test_Batch_new()
     assert(filtered_batch.filter_nil == true, "filter_nil should be true when specified")
 
     TestTools.assertErrorMsgContains("'columns' must be a table.", function()
-        -- Changed
         Batch.new(nil)
     end)
 end
 
 -- Test for Batch:add and Batch:add_record
 function test_case.test_Batch_add_records()
-    local col1 = MockColumn:new("timestamp", "I4", 4)
-    local col2 = MockColumn:new("value", "f", 4)
+    local col1 = MockColumn:new("timestamp", "timestamp", "I4", 4)
+    local col2 = MockColumn:new("value", "number", "f", 4)
     local mock_cols = MockColumns:new({ col1, col2 }, 60) -- Interval 60 seconds
 
     local batch = Batch.new(mock_cols)
 
+    local fixed_ts_base = 1200 -- Fixed timestamp base
+
     -- Add first record
-    local ts1 = os.time()
+    local ts1 = fixed_ts_base
     batch:add({ ts1, 10.5 })
     assert(batch:count() == 1, "Batch count should be 1")
     assert(batch:start_time() == ts1, "Start time should be ts1")
@@ -116,7 +126,7 @@ function test_case.test_Batch_add_records()
     assert(batch:end_time() == ts2, "End time should be ts2")
 
     -- Add record with a gap, should fill nil records
-    local ts3 = ts2 + 60 * 3 -- 3 intervals later
+    local ts3 = ts2 + 60 * 3 -- 3 intervals later, so 2 nil records should be filled
     batch:add({ ts3, 12.0 })
     assert(batch:count() == 5, "Batch count should be 5 (2 original + 2 nil + 1 new)")
     assert(batch:end_time() == ts3, "End time should be ts3")
@@ -130,29 +140,28 @@ function test_case.test_Batch_add_records()
 
     -- Test adding a record out of order
     local ts_out_of_order = ts1 + 30
-    TestTools.assertErrorMsgContains("Data Time out of order.", function()
-        -- Changed
+    TestTools.assertErrorMsgContains("Data Time not match interval.", function()
         batch:add({ ts_out_of_order, 9.0 })
     end)
 
     -- Test filter_nil = true
     local filtered_batch = Batch.new(mock_cols, true)
     local nil_record_flags = mock_cols.nil_record_flags
-    filtered_batch:add({ os.time(), nil }, nil_record_flags) -- Add a nil record
+    filtered_batch:add({ fixed_ts_base, nil }, nil_record_flags) -- Add a nil record
     assert(filtered_batch:count() == 0, "Nil record should be filtered out")
 
-    filtered_batch:add({ os.time() + 1, 100.0 })
+    filtered_batch:add({ fixed_ts_base + 60, 100.0 })
     assert(filtered_batch:count() == 1, "Non-nil record should be added")
 end
 
 -- Test for Batch:add_records
 function test_case.test_Batch_add_multiple_records()
-    local col1 = MockColumn:new("timestamp", "I4", 4)
-    local col2 = MockColumn:new("value", "f", 4)
+    local col1 = MockColumn:new("timestamp", "timestamp", "I4", 4)
+    local col2 = MockColumn:new("value", "number", "f", 4)
     local mock_cols = MockColumns:new({ col1, col2 }, 60)
 
     local batch = Batch.new(mock_cols)
-    local ts_base = os.time()
+    local ts_base = 1200 -- Fixed timestamp base
 
     local records_to_add = {
         Record.new(mock_cols, { ts_base, 1.1 }),
@@ -173,12 +182,12 @@ end
 
 -- Test for Batch:get_record
 function test_case.test_Batch_get_record()
-    local col1 = MockColumn:new("timestamp", "I4", 4)
-    local col2 = MockColumn:new("value", "f", 4)
+    local col1 = MockColumn:new("timestamp", "timestamp", "I4", 4)
+    local col2 = MockColumn:new("value", "number", "f", 4)
     local mock_cols = MockColumns:new({ col1, col2 })
 
     local batch = Batch.new(mock_cols)
-    local ts = os.time()
+    local ts = 1200 -- Fixed timestamp base
     batch:add({ ts, 10.5 })
     batch:add({ ts + 60, 11.0 })
 
@@ -191,24 +200,22 @@ function test_case.test_Batch_get_record()
     assert(record2:get_value("value") == 11.0, "get_record(2) value incorrect")
 
     TestTools.assertErrorMsgContains("Index 0 is out of bounds", function()
-        -- Changed
         batch:get_record(0)
     end)
     TestTools.assertErrorMsgContains("Index 3 is out of bounds", function()
-        -- Changed
         batch:get_record(3)
     end)
 end
 
 -- Test for Batch:toBinary and Batch:fromBinary
 function test_case.test_Batch_binary_serialization()
-    local col1 = MockColumn:new("timestamp", "I4", 4)
-    local col2 = MockColumn:new("value", "f", 4)
-    local col3 = MockColumn:new("status", "I4", 4)
+    local col1 = MockColumn:new("timestamp", "timestamp", "I4", 4)
+    local col2 = MockColumn:new("value", "number", "f", 4)
+    local col3 = MockColumn:new("status", "number", "I4", 4)
     local mock_cols = MockColumns:new({ col1, col2, col3 }, 60)
 
     local original_batch = Batch.new(mock_cols)
-    local ts_base = os.time()
+    local ts_base = 1200 -- Fixed timestamp base
     original_batch:add({ ts_base, 10.1, 1 })
     original_batch:add({ ts_base + 60, nil, 0 }) -- Nil value
     original_batch:add({ ts_base + 180, 12.3, 1 }) -- Gap, should fill a nil record
