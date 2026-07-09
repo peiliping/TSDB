@@ -60,14 +60,17 @@ function DataTable:create()
 end
 
 function DataTable:get_stat()
-    return (not self.initialized) and nil or {
-        start_time = self.data_file.start_time,
-        end_time = self.data_file.end_time,
-        interval = self.data_file.interval,
-        file_size = self.data_file.file_size,
-        record_size = self.data_file.record_size,
-        estimated_rows = self.data_file:count(),
-    }
+    if self.initialized then
+        return {
+            start_time = self.data_file.start_time,
+            end_time = self.data_file.end_time,
+            interval = self.data_file.interval,
+            file_size = self.data_file.file_size,
+            record_size = self.data_file.record_size,
+            estimated_rows = self.data_file:count(),
+        }
+    end
+    return nil
 end
 
 local function align_to_interval(ts, interval)

@@ -6,6 +6,7 @@ local test_cases = {
     "test.t_Record",
     "test.t_Batch",
     "test.t_DataFile",
+    "test.t_DataTable",
 }
 
 for _, module_name in ipairs(test_cases) do

@@ -2,13 +2,11 @@ local BASE_PATH = (os.getenv("TSDB_BASE_PATH") or "/root/tsdb")
 local DATA_PATH = BASE_PATH .. "/data/"
 package.path = package.path .. ";" .. BASE_PATH .. "/?.lua"
 
-local AggFunctions = require("aggregate.Functions")
+local AggFunctions = require("aggregate.Functions") -- Assuming AggFunctions is now in aggregate/Functions.lua
 local DatabaseCore = require("db.Database")
 
--- Define the TSDB module to be returned when required
 local TSDB = {}
 
--- Expose core database functions through TSDB module
 function TSDB.new(...)
     return DatabaseCore.new(...)
 end
@@ -50,7 +48,7 @@ end
 
 local function executeAggSliding(tsTable, startTs, endTs, slidingSize, expr)
     local aggs = AggFunctions.parserExpr(tsTable.schema, expr)
-    local records = tsTable:queryAggSliding(tsTable, startTs, endTs, slidingSize, aggs) -- Corrected first arg to tsTable
+    local records = tsTable:queryAggSliding(tsTable, startTs, endTs, slidingSize, aggs)
     for _, record in ipairs(records) do
         print(table.concat(record, " "))
     end
@@ -109,7 +107,6 @@ local function checkArg(key, value)
     return value
 end
 
--- Command-line interface main function
 local function main(args)
     local cmd = args[1]
     if cmd == "stat" then
@@ -131,20 +128,20 @@ local function main(args)
         local et = checkArg("endTime", tonumber(args[4]))
         local filterZero = (args[5] and args[5] == "true" or false)
         local db = DatabaseCore.new(DATA_PATH, tb, true)
-        local tsTable = db:get_table(tb) -- Changed to get_table
+        local tsTable = db:get_table(tb)
         executeQuery(tsTable, st, et, filterZero)
     elseif cmd == "write" then
         local tb = checkArg("tablenName", args[2])
         local db = DatabaseCore.new(DATA_PATH, tb, false)
-        local tsTable = db:get_table(tb) -- Changed to get_table
+        local tsTable = db:get_table(tb)
         executeWrite(tsTable, args)
     elseif cmd == "rollup" then
         local srcTableName = checkArg("sourceTable", args[2])
         local destTableName = checkArg("destTable", args[3])
         local srcDB = DatabaseCore.new(DATA_PATH, srcTableName, true)
         local destDB = DatabaseCore.new(DATA_PATH, destTableName, false)
-        local srcTable = srcDB:get_table(srcTableName) -- Changed to get_table
-        local destTable = destDB:get_table(destTableName) -- Changed to get_table
+        local srcTable = srcDB:get_table(srcTableName)
+        local destTable = destDB:get_table(destTableName)
         local st = checkArg("startTime", tonumber(args[4]))
         local et = checkArg("endTime", tonumber(args[5]))
         executeRollup(srcTable, destTable, st, et)
@@ -153,8 +150,8 @@ local function main(args)
         local destTableName = checkArg("destTable", args[3])
         local srcDB = DatabaseCore.new(DATA_PATH, srcTableName, true)
         local destDB = DatabaseCore.new(DATA_PATH, destTableName, false)
-        local srcTable = srcDB:get_table(srcTableName) -- Changed to get_table
-        local destTable = destDB:get_table(destTableName) -- Changed to get_table
+        local srcTable = srcDB:get_table(srcTableName)
+        local destTable = destDB:get_table(destTableName)
         local st = checkArg("startTime", tonumber(args[4]))
         local et = checkArg("endTime", tonumber(args[5]))
         local size = checkArg("size", tonumber(args[6]))
@@ -167,7 +164,7 @@ local function main(args)
         local expr = checkArg("expr", args[6])
         local mode = checkArg("mode", args[7])
         local db = DatabaseCore.new(DATA_PATH, tb, true)
-        local tsTable = db:get_table(tb) -- Changed to get_table
+        local tsTable = db:get_table(tb)
         if mode == "Tumbling" then
             executeAggTumbling(tsTable, st, et, num, expr)
         elseif mode == "Sliding" then
@@ -185,7 +182,6 @@ local function main(args)
     end
 end
 
--- Run client logic if the script is executed directly
 if arg then
     xpcall(function()
         main(arg)
