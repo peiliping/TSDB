@@ -5,8 +5,7 @@ local test_cases = {
     { require("test.t_BinaryTools") },
     { require("test.t_Record") },
     { require("test.t_Batch") },
-    --{ require("test.t_GroupBatch") },
-    --TODO @db
+    { require("test.t_DataFile") },
 }
 
 for i, tc in ipairs(test_cases) do
