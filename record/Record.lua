@@ -38,6 +38,7 @@ function Record.create_nil_record(columns, timestamp_value)
     return Record.new(columns, { timestamp_value }, columns.nil_record_flags)
 end
 
+--TODO fromBinary
 function Record.fromBinary(columns, binary_string)
     local data_list, nil_flags = BinaryTools.unpack_record_data(columns, binary_string)
     return Record.new(columns, data_list, nil_flags)
@@ -47,7 +48,7 @@ function Record:is_nil_record()
     return self.nil_flags == self.columns.nil_record_flags
 end
 
-function Record:getTimestamp()
+function Record:get_timestamp()
     return self:get_value_by_index(1)
 end
 
@@ -65,10 +66,10 @@ function Record:_check_index(index)
     end
 end
 
-function Record:get_value_by_index(index)
+function Record:get_value_by_index(index, default_val)
     self:_check_index(index)
     if BitTools.check_bit(self.nil_flags, index - 1) then
-        return nil
+        return default_val
     end
     return self.data[index]
 end
@@ -92,8 +93,23 @@ function Record:is_column_nil_by_index(index)
     return BitTools.check_bit(self.nil_flags, index - 1)
 end
 
+--TODO toBinary
 function Record:toBinary()
     return BinaryTools.pack_record_data(self.columns, self.data, self.nil_flags)
+end
+
+function Record:to_string(_cache)
+    if self.nil_flags == 0 then
+        return table.concat(self.data, " ")
+    else
+        if not _cache then
+            _cache = {}
+        end
+        for i = 1, self.columns:count() do
+            _cache[i] = self:get_value_by_index(i, "nil");
+        end
+        return table.concat(_cache, " ")
+    end
 end
 
 return Record

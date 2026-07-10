@@ -59,10 +59,10 @@ function test_case.test_Batch_add_records()
     assert(batch:end_time() == ts3, "End time should be ts3")
 
     local record_ts2_plus_interval = batch:get_record(3)
-    assert(record_ts2_plus_interval:getTimestamp() == ts2 + interval, "Filled record timestamp incorrect")
+    assert(record_ts2_plus_interval:get_timestamp() == ts2 + interval, "Filled record timestamp incorrect")
     assert(record_ts2_plus_interval:is_nil_record(), "Should be a nil record")
     local record_ts2_plus_2_interval = batch:get_record(4)
-    assert(record_ts2_plus_2_interval:getTimestamp() == ts2 + 2 * interval, "Filled record timestamp incorrect")
+    assert(record_ts2_plus_2_interval:get_timestamp() == ts2 + 2 * interval, "Filled record timestamp incorrect")
     assert(record_ts2_plus_2_interval:is_nil_record(), "Should be a nil record")
 
     local ts_out_of_order = ts1 + interval / 2
@@ -101,7 +101,7 @@ function test_case.test_Batch_add_multiple_records()
     assert(batch:end_time() == ts_base + 3 * interval, "End time incorrect")
 
     local filled_record = batch:get_record(3)
-    assert(filled_record:getTimestamp() == ts_base + 2 * interval, "Filled record timestamp incorrect")
+    assert(filled_record:get_timestamp() == ts_base + 2 * interval, "Filled record timestamp incorrect")
     assert(filled_record:is_nil_record(), "Filled record should be nil")
 end
 
@@ -117,11 +117,11 @@ function test_case.test_Batch_get_record()
     batch:add({ ts + interval, 11.0 })
 
     local record1 = batch:get_record(1)
-    assert(record1:getTimestamp() == ts, "get_record(1) timestamp incorrect")
+    assert(record1:get_timestamp() == ts, "get_record(1) timestamp incorrect")
     assert(math.abs(record1:get_value("value") - 10.5) < 0.001, "get_record(1) value incorrect")
 
     local record2 = batch:get_record(2)
-    assert(record2:getTimestamp() == ts + interval, "get_record(2) timestamp incorrect")
+    assert(record2:get_timestamp() == ts + interval, "get_record(2) timestamp incorrect")
     assert(math.abs(record2:get_value("value") - 11.0) < 0.001, "get_record(2) value incorrect")
 
     TestTools.assertErrorMsgContains("Index 0 is out of bounds", function()
@@ -160,7 +160,7 @@ function test_case.test_Batch_binary_serialization()
         local original_record = original_batch:get_record(i)
         local decoded_record = decoded_batch:get_record(i)
 
-        assert(original_record:getTimestamp() == decoded_record:getTimestamp(), "Record " .. i .. " timestamp mismatch")
+        assert(original_record:get_timestamp() == decoded_record:get_timestamp(), "Record " .. i .. " timestamp mismatch")
         assert(original_record:get_value("status") == decoded_record:get_value("status"), "Record " .. i .. " status mismatch")
         assert(original_record.nil_flags == decoded_record.nil_flags, "Record " .. i .. " nil_flags mismatch")
 

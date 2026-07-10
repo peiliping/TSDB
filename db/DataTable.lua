@@ -9,6 +9,7 @@ local RingBuffer = require("aggregate.RingBuffer")
 
 local DataTable = {
     name = nil,
+    config = nil,
     columns = nil,
     data_file = nil,
     initialized = nil,
@@ -41,6 +42,7 @@ end
 function DataTable.new(name, config, file_path)
     local self = setmetatable({}, DataTable)
     self.name = name
+    self.config = config
     self.columns = Columns.new(config_to_cols(config))
     self.data_file = DataFile.new(file_path, config.block_size,
             self.columns:get_interval(), self.columns.record_size)
@@ -128,7 +130,7 @@ function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_fun
     local last_agg_time
     local agg_record
     for record in group:iterator() do
-        cur_agg_time = align_to_interval(record:getTimestamp(), agg_interval)
+        cur_agg_time = align_to_interval(record:get_timestamp(), agg_interval)
         if cur_agg_time ~= last_agg_time then
             if agg_record then
                 scan_reduce(mr_functions, agg_record)
@@ -148,14 +150,14 @@ function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_fun
     return result
 end
 
-function DataTable:query_agg_sliding(start_time, end_time, slidingSize, mr_functions)
+function DataTable:query_agg_sliding(start_time, end_time, sliding_size, mr_functions)
     self:_check_init()
     local group = self:query_group(start_time, end_time, nil, true)
     local result = {}
     local column_datas = {}
     local col_count = self.columns:count()
     for i = 1, col_count do
-        column_datas[i] = RingBuffer.new(slidingSize)
+        column_datas[i] = RingBuffer.new(sliding_size)
     end
     local seq = 0
     for record in group:iterator() do
@@ -163,10 +165,10 @@ function DataTable:query_agg_sliding(start_time, end_time, slidingSize, mr_funct
         for i = 1, col_count do
             column_datas[i]:add(record:get_value_by_index(i))
         end
-        if seq >= slidingSize then
-            local agg_record = { record:getTimestamp() }
+        if seq >= sliding_size then
+            local agg_record = { record:get_timestamp() }
             table.insert(result, agg_record)
-            for i = 1, slidingSize do
+            for i = 1, sliding_size do
                 for k = 1, #mr_functions do
                     local mr = mr_functions[k]
                     agg_record[k + 1] = mr.map(agg_record[k + 1], column_datas[mr.column_id]:get(i))

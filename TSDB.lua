@@ -1,89 +1,74 @@
-local BASE_PATH = (os.getenv("TSDB_BASE_PATH") or "/root/tsdb")
-local DATA_PATH = BASE_PATH .. "/data/"
-package.path = package.path .. ";" .. BASE_PATH .. "/?.lua"
+local ROOT_PATH = os.getenv("TSDB_PATH") or "./"
+local DATA_PATH = ROOT_PATH .. "/data/"
+package.path = package.path .. ";" .. ROOT_PATH .. "/?.lua"
 
-local AggFunctions = require("aggregate.Functions")
-local DatabaseCore = require("db.Database")
+local Database = require("db.Database")
+local Functions = require("aggregate.Functions")
+local Tools = require("tools.Tools")
+local Batch = require("record.Batch")
 
-local TSDB = {}
-
-function TSDB.new(...)
-    return DatabaseCore.new(...)
-end
-
-function TSDB:get_table(...)
-    return DatabaseCore:get_table(...)
-end
-
-function TSDB:scan_tables_stat(...)
-    return DatabaseCore:scan_tables_stat(...)
-end
-
--- Helper function for argument validation
-local function checkArg(argName, value)
+local function check_arg(name, value)
     if not value then
-        error("Argument '" .. argName .. "' missing or invalid.")
+        error("Argument '" .. name .. "' missing or invalid.")
     end
     return value
 end
 
--- Command execution functions (kept as is, or slightly modified to be more generic)
-local function executeQuery(tsTable, startTs, endTs, filterZero)
-    local records = tsTable:queryRange(startTs, endTs, filterZero)
-    for _, record in ipairs(records) do
-        print(table.concat(record, " "))
+local function execute_query(ts_table, start_ts, end_ts, filter_zero)
+    local group = ts_table:query_group(start_ts, end_ts, 10000, filter_zero)
+    for record in group:iterator() do
+        print(record:to_string())
     end
 end
 
-local function executeRollup(srcTable, destTable, startTs, endTs)
-    local aggs = AggFunctions.parserExpr(srcTable.schema, srcTable.schema.rollupExpr)
-    local records = srcTable:queryAggTumbling(startTs, endTs, destTable.interval, aggs)
-    print(destTable:writeRecords(records))
+local function execute_agg_tumbling(ts_table, start_ts, end_ts, new_interval, expr)
+    local aggs = Functions.parse_expression(expr, ts_table.columns)
+    local records = ts_table:query_agg_tumbling(start_ts, end_ts, new_interval, aggs)
+    Tools.print_table(records)
 end
 
-local function executeParallel(srcTable, destTable, startTs, endTs, size)
-    local aggs = AggFunctions.parserExpr(srcTable.schema, srcTable.schema.parallelExpr)
-    local records = srcTable:queryAggSliding(startTs, endTs, size, aggs)
-    print(destTable:writeRecords(records))
+local function execute_agg_sliding(ts_table, start_ts, end_ts, sliding_size, expr)
+    local aggs = Functions.parse_expression(expr, ts_table.columns)
+    local records = ts_table:query_agg_sliding(start_ts, end_ts, sliding_size, aggs)
+    Tools.print_table(records)
 end
 
-local function executeAggTumbling(tsTable, startTs, endTs, newInterval, expr)
-    local aggs = AggFunctions.parserExpr(tsTable.schema, expr)
-    local records = tsTable:queryAggTumbling(startTs, endTs, newInterval, aggs)
-    for _, record in ipairs(records) do
-        print(table.concat(record, " "))
-    end
+local function execute_rollup(src_table, dest_table, start_ts, end_ts)
+    local aggs = Functions.parse_expression(src_table.config.rollup_expr, src_table.columns)
+    local records = src_table:query_agg_tumbling(start_ts, end_ts, dest_table.interval, aggs)
+    local batch = Batch.new(dest_table.columns, false)
+    Tools.result_to_batch(records, batch)
+    print(dest_table:write_records(batch))
 end
 
-local function executeAggSliding(tsTable, startTs, endTs, slidingSize, expr)
-    local aggs = AggFunctions.parserExpr(tsTable.schema, expr)
-    -- The original code had `tsTable:queryAggSliding(tsTable, ...)` which is likely a typo.
-    -- Assuming the first argument should be `self` (tsTable) and not passed twice.
-    local records = tsTable:queryAggSliding(startTs, endTs, slidingSize, aggs)
-    for _, record in ipairs(records) do
-        print(table.concat(record, " "))
-    end
+local function execute_parallel(src_table, dest_table, start_ts, end_ts, size)
+    local aggs = Functions.parse_expression(src_table.config.parallel_expr, src_table.columns)
+    local records = src_table:query_agg_sliding(start_ts, end_ts, size, aggs)
+    local batch = Batch.new(dest_table.columns, false)
+    Tools.result_to_batch(records, batch)
+    print(dest_table:write_records(batch))
 end
 
-local function executeWrite(tsTable, args)
-    local columnsSize = tsTable.schema.columnsSize
-    local argSize = #args - 2 -- args[1] is "write", args[2] is table name
-    if argSize > 0 then
-        if argSize ~= columnsSize then
-            error("Args Datas Not Match SchemaSize. Expected " .. columnsSize .. ", got " .. argSize .. ".")
+--TODO
+local function execute_write(ts_table, args)
+    local columns_size = ts_table.schema.columns_size
+    local arg_size = #args - 2 -- args[1] is "write", args[2] is table name
+    if arg_size > 0 then
+        if arg_size ~= columns_size then
+            error("Args Datas Not Match SchemaSize. Expected " .. columns_size .. ", got " .. arg_size .. ".")
         end
         local record = {}
-        for i = 1, columnsSize do
+        for i = 1, columns_size do
             record[i] = tonumber(args[2 + i])
             if record[i] == nil then
                 error("Invalid number format for argument " .. (2 + i) .. ": " .. args[2 + i])
             end
         end
-        print(tsTable:writeRecords({ record }))
+        print(ts_table:write_records({ record }))
     else
         local records = {}
         local count = 0
-        local totalResult = 0
+        local total_result = 0
 
         while true do
             local line = io.stdin:read('*l')
@@ -94,167 +79,170 @@ local function executeWrite(tsTable, args)
                 error("Stdin Line Data Too Long.")
             end
             local record = {}
-            local valueCount = 0
+            local value_count = 0
             for value in string.gmatch(line, "[^%s]+") do
-                valueCount = valueCount + 1
-                record[valueCount] = tonumber(value)
-                if record[valueCount] == nil then
+                value_count = value_count + 1
+                record[value_count] = tonumber(value)
+                if record[value_count] == nil then
                     error("Invalid number format in stdin line: '" .. line .. "' for value '" .. value .. "'")
                 end
             end
-            if valueCount ~= columnsSize then
-                error(string.format("Stdin Datas Incomplete: Expected %d columns, got %d in line: '%s'.", columnsSize, valueCount, line))
+            if value_count ~= columns_size then
+                error(string.format("Stdin Datas Incomplete: Expected %d columns, got %d in line: '%s'.", columns_size, value_count, line))
             end
             count = count + 1
             records[count] = record
             if count % 8000 == 0 then
-                totalResult = totalResult + tsTable:writeRecords(records)
+                total_result = total_result + ts_table:write_records(records)
                 count = 0
                 records = {}
             end
         end
-        print(totalResult + tsTable:writeRecords(records))
+        print(total_result + ts_table:write_records(records))
     end
 end
 
--- Command handler functions
-local function handleStat(args)
-    local tableName = args[2]
-    local db = DatabaseCore.new(DATA_PATH, tableName, true)
-    local result = db:scanTablesStat(tableName) -- Pass tableName to scanTablesStat if it's optional
-    local formatStr = "| %-50s | %-50s |"
+local function handle_stat(args)
+    local table_name = args[2]
+    local db = Database.new(DATA_PATH, table_name)
+    local format_str = "| %-50s | %-50s |"
     local line = "====================================================="
-    for tblName, stat in pairs(result) do
+    print(string.format(format_str, "Key", "Value"))
+    for tbl_name, tbl in pairs(db.data_tables) do
         print(line .. "=" .. line)
-        print(string.format(formatStr, "Key", "Value"))
-        print(string.format(formatStr, "TableName", tblName))
-        for key, value in pairs(stat) do
-            print(string.format(formatStr, key, value))
+        print(string.format(format_str, "TableName", tbl_name))
+        local stat = tbl:get_stat()
+        if stat == nil then
+            print(string.format(format_str, "Status", "Not-Ready"))
+        else
+            for key, value in pairs(stat) do
+                print(string.format(format_str, key, value))
+            end
         end
     end
 end
 
-local function handleRead(args)
-    local tb = checkArg("tableName", args[2])
-    local st = checkArg("startTime", tonumber(args[3]))
-    local et = checkArg("endTime", tonumber(args[4]))
-    local filterZero = (args[5] and args[5] == "true" or false)
-    local db = DatabaseCore.new(DATA_PATH, tb, true)
-    local tsTable = db:get_table(tb)
-    executeQuery(tsTable, st, et, filterZero)
+local function handle_read(args)
+    local table_name = check_arg("table_name", args[2])
+    local start_time = check_arg("start_ts", tonumber(args[3]))
+    local end_time = check_arg("end_ts", tonumber(args[4]))
+    local filter_zero = (args[5] and args[5] == "true" or false)
+    local db = Database.new(DATA_PATH, table_name)
+    local ts_table = db:get_table(table_name)
+    execute_query(ts_table, start_time, end_time, filter_zero)
 end
 
-local function handleWrite(args)
-    local tb = checkArg("tableName", args[2])
-    local db = DatabaseCore.new(DATA_PATH, tb, false)
-    local tsTable = db:get_table(tb)
-    executeWrite(tsTable, args)
-end
-
-local function handleRollup(args)
-    local srcTableName = checkArg("sourceTable", args[2])
-    local destTableName = checkArg("destTable", args[3])
-    local srcDB = DatabaseCore.new(DATA_PATH, srcTableName, true)
-    local destDB = DatabaseCore.new(DATA_PATH, destTableName, false)
-    local srcTable = srcDB:get_table(srcTableName)
-    local destTable = destDB:get_table(destTableName)
-    local st = checkArg("startTime", tonumber(args[4]))
-    local et = checkArg("endTime", tonumber(args[5]))
-    executeRollup(srcTable, destTable, st, et)
-end
-
-local function handleParallel(args)
-    local srcTableName = checkArg("sourceTable", args[2])
-    local destTableName = checkArg("destTable", args[3])
-    local srcDB = DatabaseCore.new(DATA_PATH, srcTableName, true)
-    local destDB = DatabaseCore.new(DATA_PATH, destTableName, false)
-    local srcTable = srcDB:get_table(srcTableName)
-    local destTable = destDB:get_table(destTableName)
-    local st = checkArg("startTime", tonumber(args[4]))
-    local et = checkArg("endTime", tonumber(args[5]))
-    local size = checkArg("size", tonumber(args[6]))
-    executeParallel(srcTable, destTable, st, et, size)
-end
-
-local function handleAgg(args)
-    local tb = checkArg("tableName", args[2])
-    local st = checkArg("startTime", tonumber(args[3]))
-    local et = checkArg("endTime", tonumber(args[4]))
-    local num = checkArg("number", tonumber(args[5]))
-    local expr = checkArg("expr", args[6])
-    local mode = checkArg("mode", args[7])
-    local db = DatabaseCore.new(DATA_PATH, tb, true)
-    local tsTable = db:get_table(tb)
+local function handle_agg(args)
+    local table_name = check_arg("table_name", args[2])
+    local start_time = check_arg("start_ts", tonumber(args[3]))
+    local end_time = check_arg("end_ts", tonumber(args[4]))
+    local num = check_arg("num", tonumber(args[5]))
+    local expr = check_arg("expr", args[6])
+    local mode = check_arg("mode", args[7])
+    local db = Database.new(DATA_PATH, table_name)
+    local ts_table = db:get_table(table_name)
     if mode == "Tumbling" then
-        executeAggTumbling(tsTable, st, et, num, expr)
+        execute_agg_tumbling(ts_table, start_time, end_time, num, expr)
     elseif mode == "Sliding" then
-        executeAggSliding(tsTable, st, et, num, expr)
+        execute_agg_sliding(ts_table, start_time, end_time, num, expr)
     else
         error("Unsupported aggregation mode: '" .. mode .. "'. Must be 'Tumbling' or 'Sliding'.")
     end
 end
 
--- Command dispatch table
-local commands = {
+local function handle_rollup(args)
+    local src_table_name = check_arg("src_table", args[2])
+    local dest_table_name = check_arg("dest_table", args[3])
+    local src_db = Database.new(DATA_PATH, src_table_name)
+    local dest_db = Database.new(DATA_PATH, dest_table_name)
+    local src_table = src_db:get_table(src_table_name)
+    local dest_table = dest_db:get_table(dest_table_name)
+    local start_time = check_arg("start_ts", tonumber(args[4]))
+    local end_time = check_arg("end_ts", tonumber(args[5]))
+    execute_rollup(src_table, dest_table, start_time, end_time)
+end
+
+local function handle_parallel(args)
+    local src_table_name = check_arg("src_table", args[2])
+    local dest_table_name = check_arg("dest_table", args[3])
+    local src_db = Database.new(DATA_PATH, src_table_name, true)
+    local dest_db = Database.new(DATA_PATH, dest_table_name, false)
+    local src_table = src_db:get_table(src_table_name)
+    local dest_table = dest_db:get_table(dest_table_name)
+    local start_time = check_arg("start_ts", tonumber(args[4]))
+    local end_time = check_arg("end_ts", tonumber(args[5]))
+    local size = check_arg("size", tonumber(args[6]))
+    execute_parallel(src_table, dest_table, start_time, end_time, size)
+end
+--TODO
+local function handle_write(args)
+    local table_name = check_arg("table_name", args[2])
+    local db = database.new(DATA_PATH, table_name, false)
+    local ts_table = db:get_table(table_name)
+    execute_write(ts_table, args)
+end
+
+--------------------------------------------------------------
+
+local COMMANDS = {
     stat = {
-        handler = handleStat,
+        handler = handle_stat,
         usage = "tsdb stat [<table_name>]",
         description = "Display statistics for all tables or a specific table."
     },
     read = {
-        handler = handleRead,
-        usage = "tsdb read <table_name> <start_ts> <end_ts> [filter_zero]",
+        handler = handle_read,
+        usage = "tsdb read <table_name> <start_ts> <end_ts> [<filter_zero>]",
         description = "Read records from a table within a timestamp range."
     },
     write = {
-        handler = handleWrite,
+        handler = handle_write,
         usage = "tsdb write <table_name> [<data...>]",
         description = "Write records to a table. Data can be provided as arguments or via stdin."
     },
+    agg = {
+        handler = handle_agg,
+        usage = "tsdb agg <table_name> <start_ts> <end_ts> <number> <agg_expr> <mode>",
+        description = "Perform a Tumbling or Sliding window aggregation and print results."
+    },
     rollup = {
-        handler = handleRollup,
+        handler = handle_rollup,
         usage = "tsdb rollup <source_table> <dest_table> <start_ts> <end_ts>",
         description = "Perform a rollup aggregation from a source table to a destination table."
     },
     parallel = {
-        handler = handleParallel,
+        handler = handle_parallel,
         usage = "tsdb parallel <source_table> <dest_table> <start_ts> <end_ts> <size>",
         description = "Perform a parallel (sliding window) aggregation from a source table to a destination table."
-    },
-    agg = {
-        handler = handleAgg,
-        usage = "tsdb agg <table_name> <start_ts> <end_ts> <number> <agg_expr> <mode>",
-        description = "Perform a tumbling or sliding window aggregation and print results."
     },
 }
 
 local function main(args)
-    local cmdName = args[1]
-
-    if not cmdName or not commands[cmdName] then
+    local cmd = args[1]
+    if not cmd then
         print("Usage:")
-        for name, cmd in pairs(commands) do
-            print("  " .. cmd.usage .. " - " .. cmd.description)
-        end
-        if cmdName then
-            error("Unknown command: '" .. cmdName .. "'")
+        print("")
+        for _, item in pairs(COMMANDS) do
+            print("  - " .. item.usage)
+            print("")
+            print("      " .. item.description)
+            print("")
         end
         return
     end
-
-    local command = commands[cmdName]
+    local command = COMMANDS[cmd]
+    if not command then
+        print("Unknown command : " .. cmd)
+        return
+    end
     command.handler(args)
 end
 
 if arg then
     xpcall(function()
         main(arg)
-    end,
-            function(err)
-                io.stderr:write("Operation failed: " .. tostring(err) .. "\n")
-                os.exit(1)
-            end
-    )
+    end, function(err)
+        io.stderr:write("Operation failed: " .. tostring(err) .. "\n")
+        os.exit(1)
+    end)
 end
-
-return TSDB

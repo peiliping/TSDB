@@ -93,6 +93,7 @@ function Batch:get_record(index)
     return Record.new(self.columns, self.datas[index], self.nil_flags[index])
 end
 
+--TODO toBinary
 function Batch:toBinary()
     local result = {}
     local cache = {}
@@ -102,6 +103,7 @@ function Batch:toBinary()
     return table.concat(result)
 end
 
+--TODO fromBinary
 function Batch:fromBinary(binary_string)
     local pos = 1
     local len = #binary_string

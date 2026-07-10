@@ -213,7 +213,7 @@ local function compare_batches(expected_batch, actual_batch, test_name)
         local expected_record = expected_batch:get_record(i)
         local actual_record = actual_batch:get_record(i)
 
-        assert(expected_record:getTimestamp() == actual_record:getTimestamp(), test_name .. ": Record " .. i .. " timestamp mismatch")
+        assert(expected_record:get_timestamp() == actual_record:get_timestamp(), test_name .. ": Record " .. i .. " timestamp mismatch")
         assert(expected_record.nil_flags == actual_record.nil_flags, test_name .. ": Record " .. i .. " nil_flags mismatch")
 
         local expected_value = expected_record:get_value("value")

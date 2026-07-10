@@ -185,8 +185,8 @@ function test_case.test_query_records()
     local result_batch = dt:query_records(query_start, query_end, false)
 
     assert(result_batch:count() == 3, "Query records count mismatch")
-    assert(result_batch:get_record(1):getTimestamp() == query_start, "Query records start_time mismatch")
-    assert(result_batch:get_record(3):getTimestamp() == query_end, "Query records end_time mismatch")
+    assert(result_batch:get_record(1):get_timestamp() == query_start, "Query records start_time mismatch")
+    assert(result_batch:get_record(3):get_timestamp() == query_end, "Query records end_time mismatch")
     assert(result_batch:get_record(1):get_value_by_index(2) == 2, "Query record 1 value1 mismatch")
     assert(math.abs(result_batch:get_record(1):get_value_by_index(3) - 2.1) < 0.001, "Query record 1 value2 mismatch")
     teardown()
@@ -261,12 +261,12 @@ function test_case.test_query_agg_sliding()
     local batch_to_write = create_real_batch(dt.columns, start_ts, count, function(i, ts) return {i + 1, (i + 1) + 0.1} end)
     dt:write_records(batch_to_write)
 
-    local slidingSize = 3
+    local sliding_size = 3
     local mr_functions = {
         { column_id = 2, map = function(acc, val) return (acc or 0) + val end, reduce = function(acc) return acc end },
         { column_id = 3, map = function(acc, val) return math.max(acc or 0, val) end, reduce = function(acc) return acc end },
     }
-    local results = dt:query_agg_sliding(start_ts, end_ts, slidingSize, mr_functions)
+    local results = dt:query_agg_sliding(start_ts, end_ts, sliding_size, mr_functions)
 
     assert(#results == 8, "Sliding agg results count mismatch")
 

@@ -75,7 +75,7 @@ function test_case.test_binary_serialization()
 
     local decoded_record = Record.fromBinary(real_cols, binary_data)
     assert(decoded_record ~= nil, "Decoded record should not be nil")
-    assert(decoded_record:getTimestamp() == record:getTimestamp(), "Timestamp should match")
+    assert(decoded_record:get_timestamp() == record:get_timestamp(), "Timestamp should match")
     assert(decoded_record:get_value("status") == record:get_value("status"), "Status should match")
     assert(math.abs(decoded_record:get_value("value") - record:get_value("value")) < 0.001, "Value should match within tolerance")
     assert(decoded_record.nil_flags == record.nil_flags, "Nil flags should match")
@@ -85,7 +85,7 @@ function test_case.test_binary_serialization()
     local binary_data_with_nil = record_with_nil:toBinary()
     local decoded_record_with_nil = Record.fromBinary(real_cols, binary_data_with_nil)
 
-    assert(decoded_record_with_nil:getTimestamp() == record_with_nil:getTimestamp(), "Timestamp (nil) should match")
+    assert(decoded_record_with_nil:get_timestamp() == record_with_nil:get_timestamp(), "Timestamp (nil) should match")
     assert(decoded_record_with_nil:get_value("value") == nil, "Nil value should be nil")
     assert(decoded_record_with_nil:get_value("status") == record_with_nil:get_value("status"), "Status (nil) should match")
     assert(decoded_record_with_nil.nil_flags == record_with_nil.nil_flags, "Nil flags (nil) should match")
@@ -100,7 +100,7 @@ function test_case.test_data_access()
     local timestamp = math.floor(os.time() / 60) * 60
     local record = Record.new(real_cols, { timestamp, 25.5, 60 })
 
-    assert(record:getTimestamp() == timestamp, "getTimestamp should return correct value")
+    assert(record:get_timestamp() == timestamp, "get_timestamp should return correct value")
 
     assert(math.abs(record:get_value("temperature") - 25.5) < 0.001, "get_value should return correct value by name")
     assert(record:get_value("humidity") == 60, "get_value should return correct value by name")
