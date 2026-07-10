@@ -146,11 +146,11 @@ function test_case.test_Batch_binary_serialization()
     original_batch:add({ ts_base + interval, nil, 0 })
     original_batch:add({ ts_base + 3 * interval, 12.3, 1 })
 
-    local binary_data = original_batch:toBinary()
+    local binary_data = original_batch:to_binary()
     assert(binary_data ~= nil and #binary_data > 0, "Binary data should not be empty")
 
     local decoded_batch = Batch.new(real_cols)
-    decoded_batch:fromBinary(binary_data)
+    decoded_batch:from_binary(binary_data)
 
     assert(decoded_batch:count() == original_batch:count(), "Decoded batch count should match original")
     assert(decoded_batch:start_time() == original_batch:start_time(), "Decoded start time should match")

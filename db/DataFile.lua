@@ -68,7 +68,7 @@ function DataFile:write(batch)
     end
     local b_start_time = batch:start_time()
     local b_end_time = batch:end_time()
-    local batch_binary = batch:toBinary()
+    local batch_binary = batch:to_binary()
     local batch_len = #batch_binary
     local update_header = false
     local cur_pos
@@ -127,7 +127,7 @@ function DataFile:read(batch, start_time, end_time)
     local binary_string = f:read(read_len)
     f:close()
     if binary_string and #binary_string > 0 then
-        batch:fromBinary(binary_string)
+        batch:from_binary(binary_string)
     end
 end
 

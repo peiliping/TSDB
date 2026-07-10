@@ -93,8 +93,7 @@ function Batch:get_record(index)
     return Record.new(self.columns, self.datas[index], self.nil_flags[index])
 end
 
---TODO toBinary
-function Batch:toBinary()
+function Batch:to_binary()
     local result = {}
     local cache = {}
     for i, data in ipairs(self.datas) do
@@ -103,8 +102,7 @@ function Batch:toBinary()
     return table.concat(result)
 end
 
---TODO fromBinary
-function Batch:fromBinary(binary_string)
+function Batch:from_binary(binary_string)
     local pos = 1
     local len = #binary_string
     while pos <= len do

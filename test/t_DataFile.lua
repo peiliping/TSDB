@@ -89,7 +89,7 @@ function test_case.test_write_single_batch_to_empty_file()
 
     f:seek("set", Headers.header_length)
     local data_binary = f:read(count * TEST_RECORD_SIZE)
-    assert(batch:toBinary() == data_binary, "Written data mismatch")
+    assert(batch:to_binary() == data_binary, "Written data mismatch")
     f:close()
     teardown()
 end
@@ -138,7 +138,7 @@ function test_case.test_write_multiple_batches_overwrite()
     local f = io.open(TEST_FILE, "rb")
     f:seek("set", Headers.header_length + (start_ts2 - start_ts1) / TEST_INTERVAL * TEST_RECORD_SIZE)
     local overwritten_data = f:read(count2 * TEST_RECORD_SIZE)
-    assert(batch2:toBinary() == overwritten_data, "Overwritten data mismatch")
+    assert(batch2:to_binary() == overwritten_data, "Overwritten data mismatch")
     f:close()
 
     teardown()

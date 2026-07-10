@@ -38,8 +38,7 @@ function Record.create_nil_record(columns, timestamp_value)
     return Record.new(columns, { timestamp_value }, columns.nil_record_flags)
 end
 
---TODO fromBinary
-function Record.fromBinary(columns, binary_string)
+function Record.from_binary(columns, binary_string)
     local data_list, nil_flags = BinaryTools.unpack_record_data(columns, binary_string)
     return Record.new(columns, data_list, nil_flags)
 end
@@ -93,8 +92,7 @@ function Record:is_column_nil_by_index(index)
     return BitTools.check_bit(self.nil_flags, index - 1)
 end
 
---TODO toBinary
-function Record:toBinary()
+function Record:to_binary()
     return BinaryTools.pack_record_data(self.columns, self.data, self.nil_flags)
 end
 

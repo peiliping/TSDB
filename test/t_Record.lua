@@ -70,10 +70,10 @@ function test_case.test_binary_serialization()
     local data = { math.floor(os.time() / 60) * 60, 123.45, 1 }
     local record = Record.new(real_cols, data)
 
-    local binary_data = record:toBinary()
+    local binary_data = record:to_binary()
     assert(binary_data ~= nil and #binary_data > 0, "Binary data should not be empty")
 
-    local decoded_record = Record.fromBinary(real_cols, binary_data)
+    local decoded_record = Record.from_binary(real_cols, binary_data)
     assert(decoded_record ~= nil, "Decoded record should not be nil")
     assert(decoded_record:get_timestamp() == record:get_timestamp(), "Timestamp should match")
     assert(decoded_record:get_value("status") == record:get_value("status"), "Status should match")
@@ -82,8 +82,8 @@ function test_case.test_binary_serialization()
 
     local data_with_nil = { math.floor((os.time() + 1) / 60) * 60, nil, 0 }
     local record_with_nil = Record.new(real_cols, data_with_nil)
-    local binary_data_with_nil = record_with_nil:toBinary()
-    local decoded_record_with_nil = Record.fromBinary(real_cols, binary_data_with_nil)
+    local binary_data_with_nil = record_with_nil:to_binary()
+    local decoded_record_with_nil = Record.from_binary(real_cols, binary_data_with_nil)
 
     assert(decoded_record_with_nil:get_timestamp() == record_with_nil:get_timestamp(), "Timestamp (nil) should match")
     assert(decoded_record_with_nil:get_value("value") == nil, "Nil value should be nil")
