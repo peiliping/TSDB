@@ -57,6 +57,7 @@ end
 function DataTable:create()
     if not self.initialized then
         self.data_file:create()
+        self.data_file:load()
         self.initialized = true
     end
 end

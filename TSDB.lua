@@ -114,6 +114,13 @@ local function handle_stat(args)
     end
 end
 
+local function handle_create(args)
+    local table_name = args[2]
+    local db = Database.new(DATA_PATH, table_name)
+    local ts_table = db:get_table(table_name)
+    ts_table:create()
+end
+
 local function handle_read(args)
     local table_name = check_arg("table_name", args[2])
     local start_time = check_arg("start_ts", tonumber(args[3]))
@@ -181,6 +188,11 @@ local COMMANDS = {
         handler = handle_stat,
         usage = "tsdb stat [<table_name>]",
         description = "Display statistics for all tables or a specific table."
+    },
+    create = {
+        handler = handle_create,
+        usage = "tsdb create <table_name>",
+        description = "Create table by touching file and writing headers."
     },
     read = {
         handler = handle_read,
