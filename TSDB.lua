@@ -6,6 +6,7 @@ local Database = require("db.Database")
 local Functions = require("aggregate.Functions")
 local Tools = require("tools.Tools")
 local Batch = require("record.Batch")
+local Record = require("record.Record")
 
 local function check_arg(name, value)
     if not value then
@@ -49,9 +50,9 @@ local function execute_parallel(src_table, dest_table, start_ts, end_ts, size)
     print(dest_table:write_records(batch))
 end
 
---TODO
 local function execute_write(ts_table, args)
-    local columns_size = ts_table.schema.columns_size
+    local columns_size = ts_table.columns:count()
+    local batch = Batch.new(ts_table.columns, false)
     local arg_size = #args - 2 -- args[1] is "write", args[2] is table name
     if arg_size > 0 then
         if arg_size ~= columns_size then
@@ -64,12 +65,9 @@ local function execute_write(ts_table, args)
                 error("Invalid number format for argument " .. (2 + i) .. ": " .. args[2 + i])
             end
         end
-        print(ts_table:write_records({ record }))
+        batch:add(record)
+        print(ts_table:write_records(batch))
     else
-        local records = {}
-        local count = 0
-        local total_result = 0
-
         while true do
             local line = io.stdin:read('*l')
             if line == nil then
@@ -90,15 +88,9 @@ local function execute_write(ts_table, args)
             if value_count ~= columns_size then
                 error(string.format("Stdin Datas Incomplete: Expected %d columns, got %d in line: '%s'.", columns_size, value_count, line))
             end
-            count = count + 1
-            records[count] = record
-            if count % 8000 == 0 then
-                total_result = total_result + ts_table:write_records(records)
-                count = 0
-                records = {}
-            end
+            batch:add(record)
         end
-        print(total_result + ts_table:write_records(records))
+        print(ts_table:write_records(batch))
     end
 end
 
@@ -174,10 +166,10 @@ local function handle_parallel(args)
     local size = check_arg("size", tonumber(args[6]))
     execute_parallel(src_table, dest_table, start_time, end_time, size)
 end
---TODO
+
 local function handle_write(args)
     local table_name = check_arg("table_name", args[2])
-    local db = database.new(DATA_PATH, table_name, false)
+    local db = Database.new(DATA_PATH, table_name)
     local ts_table = db:get_table(table_name)
     execute_write(ts_table, args)
 end

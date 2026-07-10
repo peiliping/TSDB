@@ -1,5 +1,5 @@
 local T = {}
-
+--TODO
 local function flatten(tbl, _idx, _result)
     if type(tbl) ~= "table" then
         error("flatten for not table.")
