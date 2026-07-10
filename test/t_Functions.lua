@@ -30,12 +30,12 @@ function test_case.test_FS_parse_item()
     assert(type(mr_func.reduce) == "function")
 
     -- Test invalid expression format
-    TestTools.assertErrorMsgContains("Invalid expression: 'sum col1'.", function() -- Changed
+    TestTools.assert_error_msg_contains("Invalid expression: 'sum col1'.", function() -- Changed
         Functions.parse_item("sum col1", mock_columns)
     end)
 
     -- Test unknown column
-    TestTools.assertErrorMsgContains("Column index not found for name: col3", function() -- Changed
+    TestTools.assert_error_msg_contains("Column index not found for name: col3", function() -- Changed
         Functions.parse_item("sum(col3)", mock_columns)
     end)
 end

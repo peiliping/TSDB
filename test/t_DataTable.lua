@@ -299,7 +299,7 @@ function test_case.test_new_invalid_column_config()
             { type = "number", precision = 0, signed = true },
         }
     }
-    TestTools.assertErrorMsgContains("Column 2: 'name' is missing.", function() DataTable.new("test_table", config_missing_name, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains("Column 2: 'name' is missing.", function() DataTable.new("test_table", config_missing_name, TEST_FILE_PATH) end)
 
     local config_missing_type = {
         block_size = TEST_BLOCK_SIZE,
@@ -308,7 +308,7 @@ function test_case.test_new_invalid_column_config()
             { name = "value1", precision = 0, signed = true },
         }
     }
-    TestTools.assertErrorMsgContains(" 'type' is missing.", function() DataTable.new("test_table", config_missing_type, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains(" 'type' is missing.", function() DataTable.new("test_table", config_missing_type, TEST_FILE_PATH) end)
 
     local config_first_not_timestamp = {
         block_size = TEST_BLOCK_SIZE,
@@ -317,7 +317,7 @@ function test_case.test_new_invalid_column_config()
             { name = "time", type = "timestamp", interval = TEST_INTERVAL },
         }
     }
-    TestTools.assertErrorMsgContains(" must be 'timestamp'.", function() DataTable.new("test_table", config_first_not_timestamp, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains(" must be 'timestamp'.", function() DataTable.new("test_table", config_first_not_timestamp, TEST_FILE_PATH) end)
 
     local config_invalid_timestamp_interval = {
         block_size = TEST_BLOCK_SIZE,
@@ -326,7 +326,7 @@ function test_case.test_new_invalid_column_config()
             { name = "value1", type = "number", precision = 0, signed = true },
         }
     }
-    TestTools.assertErrorMsgContains("'interval' must be a positive number.", function() DataTable.new("test_table", config_invalid_timestamp_interval, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains("'interval' must be a positive number.", function() DataTable.new("test_table", config_invalid_timestamp_interval, TEST_FILE_PATH) end)
 
     local config_exceed_precision = {
         block_size = TEST_BLOCK_SIZE,
@@ -335,7 +335,7 @@ function test_case.test_new_invalid_column_config()
             { name = "value1", type = "number", precision = 100, signed = true },
         }
     }
-    TestTools.assertErrorMsgContains(" exceeds its max_precision", function() DataTable.new("test_table", config_exceed_precision, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains(" exceeds its max_precision", function() DataTable.new("test_table", config_exceed_precision, TEST_FILE_PATH) end)
 
     local config_too_few_columns = {
         block_size = TEST_BLOCK_SIZE,
@@ -343,7 +343,7 @@ function test_case.test_new_invalid_column_config()
             { name = "time", type = "timestamp", interval = TEST_INTERVAL },
         }
     }
-    TestTools.assertErrorMsgContains("Columns.new: 'columns_list' must contain at least 2 columns.", function() DataTable.new("test_table", config_too_few_columns, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains("Columns.new: 'columns_list' must contain at least 2 columns.", function() DataTable.new("test_table", config_too_few_columns, TEST_FILE_PATH) end)
 
     local many_columns = {}
     table.insert(many_columns, { name = "time", type = "timestamp", interval = TEST_INTERVAL })
@@ -354,7 +354,7 @@ function test_case.test_new_invalid_column_config()
         block_size = TEST_BLOCK_SIZE,
         columns = many_columns
     }
-    TestTools.assertErrorMsgContains("Columns.new: 'columns_list' size cannot be greater than 32.", function() DataTable.new("test_table", config_too_many_columns, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains("Columns.new: 'columns_list' size cannot be greater than 32.", function() DataTable.new("test_table", config_too_many_columns, TEST_FILE_PATH) end)
 
     teardown()
 end

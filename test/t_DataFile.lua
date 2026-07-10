@@ -180,7 +180,7 @@ function test_case.test_write_error_out_of_range_start_time()
     local count_error = 2
     local batch_error = create_real_batch(start_ts_error, count_error)
 
-    TestTools.assertErrorMsgContains("Out of range", function() df:write(batch_error) end)
+    TestTools.assert_error_msg_contains("Out of range", function() df:write(batch_error) end)
 
     teardown()
 end
@@ -199,7 +199,7 @@ function test_case.test_write_error_data_gap()
     local count_gap = 2
     local batch_gap = create_real_batch(start_ts_gap, count_gap)
 
-    TestTools.assertErrorMsgContains("Data Gap detected", function() df:write(batch_gap) end)
+    TestTools.assert_error_msg_contains("Data Gap detected", function() df:write(batch_gap) end)
 
     teardown()
 end

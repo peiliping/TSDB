@@ -26,7 +26,7 @@ function test_case.test_Batch_new()
     local filtered_batch = Batch.new(real_cols, true)
     assert(filtered_batch.filter_nil == true, "filter_nil should be true when specified")
 
-    TestTools.assertErrorMsgContains("'columns' must be a table.", function()
+    TestTools.assert_error_msg_contains("'columns' must be a table.", function()
         Batch.new(nil)
     end)
 end
@@ -66,7 +66,7 @@ function test_case.test_Batch_add_records()
     assert(record_ts2_plus_2_interval:is_nil_record(), "Should be a nil record")
 
     local ts_out_of_order = ts1 + interval / 2
-    TestTools.assertErrorMsgContains("Data Time not match interval.", function()
+    TestTools.assert_error_msg_contains("Data Time not match interval.", function()
         batch:add({ ts_out_of_order, 9.0 })
     end)
 
@@ -124,10 +124,10 @@ function test_case.test_Batch_get_record()
     assert(record2:get_timestamp() == ts + interval, "get_record(2) timestamp incorrect")
     assert(math.abs(record2:get_value("value") - 11.0) < 0.001, "get_record(2) value incorrect")
 
-    TestTools.assertErrorMsgContains("Index 0 is out of bounds", function()
+    TestTools.assert_error_msg_contains("Index 0 is out of bounds", function()
         batch:get_record(0)
     end)
-    TestTools.assertErrorMsgContains("Index 3 is out of bounds", function()
+    TestTools.assert_error_msg_contains("Index 3 is out of bounds", function()
         batch:get_record(3)
     end)
 end

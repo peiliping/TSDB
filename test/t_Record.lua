@@ -30,16 +30,16 @@ function test_case.test_Record_new()
     local record_auto_nil = Record.new(real_cols, data_auto_nil)
     assert(record_auto_nil.nil_flags == explicit_nil_flags, "nil_flags should be auto-calculated correctly")
 
-    TestTools.assertErrorMsgContains("'columns' must be an a table.", function()
+    TestTools.assert_error_msg_contains("'columns' must be an a table.", function()
         Record.new(nil, data)
     end)
 
-    TestTools.assertErrorMsgContains("'data_list' must be a table.", function()
+    TestTools.assert_error_msg_contains("'data_list' must be a table.", function()
         Record.new(real_cols, nil)
     end)
 
     local data_too_many = { 123 * 60, 45.6, 789 }
-    TestTools.assertErrorMsgContains("Column definition count does not match data value count.", function()
+    TestTools.assert_error_msg_contains("Column definition count does not match data value count.", function()
         Record.new(real_cols, data_too_many)
     end)
 end
@@ -104,16 +104,16 @@ function test_case.test_data_access()
 
     assert(math.abs(record:get_value("temperature") - 25.5) < 0.001, "get_value should return correct value by name")
     assert(record:get_value("humidity") == 60, "get_value should return correct value by name")
-    TestTools.assertErrorMsgContains("Column index not found for name: non_existent", function()
+    TestTools.assert_error_msg_contains("Column index not found for name: non_existent", function()
         record:get_value("non_existent")
     end)
 
     assert(record:get_value_by_index(1) == timestamp, "get_value_by_index should return correct value")
     assert(math.abs(record:get_value_by_index(2) - 25.5) < 0.001, "get_value_by_index should return correct value")
-    TestTools.assertErrorMsgContains("Index 0 is out of bounds", function()
+    TestTools.assert_error_msg_contains("Index 0 is out of bounds", function()
         record:get_value_by_index(0)
     end)
-    TestTools.assertErrorMsgContains("Index 4 is out of bounds", function()
+    TestTools.assert_error_msg_contains("Index 4 is out of bounds", function()
         record:get_value_by_index(4)
     end)
 
@@ -136,10 +136,10 @@ function test_case.test_data_access()
     assert(record:get_value_by_index(3) == nil, "set_value_by_index should set to nil")
     assert(record:is_column_nil_by_index(3), "humidity should be nil after setting nil")
 
-    TestTools.assertErrorMsgContains("Index 0 is out of bounds", function()
+    TestTools.assert_error_msg_contains("Index 0 is out of bounds", function()
         record:set_value_by_index(0, 10)
     end)
-    TestTools.assertErrorMsgContains("Index 4 is out of bounds", function()
+    TestTools.assert_error_msg_contains("Index 4 is out of bounds", function()
         record:set_value_by_index(4, 10)
     end)
 end

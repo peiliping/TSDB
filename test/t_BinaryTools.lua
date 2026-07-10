@@ -23,26 +23,26 @@ function test_case.test_HeaderSerialization()
 
     -- Test with invalid magic number
     local invalid_magic_header = string.pack(Headers.header_format, Headers.MAGIC + 1, interval, record_size, start_time, end_time, 0)
-    TestTools.assertErrorMsgContains("invalid magic number.", function()
+    TestTools.assert_error_msg_contains("invalid magic number.", function()
         BinaryTools.unpack_header(invalid_magic_header, interval, record_size)
     end)
 
     -- Test with invalid interval
     local invalid_interval_header = string.pack(Headers.header_format, Headers.MAGIC, interval + 1, record_size, start_time, end_time, 0)
-    TestTools.assertErrorMsgContains("invalid interval.", function()
+    TestTools.assert_error_msg_contains("invalid interval.", function()
         BinaryTools.unpack_header(invalid_interval_header, interval, record_size)
     end)
 
     -- Test with invalid record size
     local invalid_record_size_header = string.pack(Headers.header_format, Headers.MAGIC, interval, record_size + 1, start_time, end_time, 0)
-    TestTools.assertErrorMsgContains("invalid record size.", function()
+    TestTools.assert_error_msg_contains("invalid record size.", function()
         BinaryTools.unpack_header(invalid_record_size_header, interval, record_size)
     end)
 
     -- Test with invalid crc32 (by modifying end_time in packed header)
     local original_crc = select(6, string.unpack(Headers.header_format, packed_header))
     local modified_header = string.pack(Headers.header_format, Headers.MAGIC, interval, record_size, start_time, end_time + 1, original_crc)
-    TestTools.assertErrorMsgContains("invalid crc32", function()
+    TestTools.assert_error_msg_contains("invalid crc32", function()
         BinaryTools.unpack_header(modified_header, interval, record_size)
     end)
 end
