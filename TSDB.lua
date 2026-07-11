@@ -17,8 +17,9 @@ end
 
 local function execute_query(ts_table, start_ts, end_ts, filter_zero)
     local group = ts_table:query_group(start_ts, end_ts, 10000, filter_zero)
+    local cache = {}
     for record in group:iterator() do
-        print(record:to_string())
+        print(record:to_string(cache))
     end
 end
 

@@ -52,7 +52,8 @@ local FS = {
                 local stdDev = math.sqrt(stdDevAcc / (size - 1))
                 local py = size * slope + intercept
                 return { py + 2 * stdDev, py - 2 * stdDev }
-            end
+            end,
+            result_size = 2,
         },
     }
 }
@@ -61,14 +62,14 @@ function FS.get(mr_name)
     return FS.ES[mr_name] or error("Unknown MR : " .. tostring(mr_name))
 end
 
-function FS.parse_item(expression, columns)
+function FS.parse_item(expression, columns, result_id)
     local mr_name, column_name = string.match(expression, "([%a%d_]+)%s*%(%s*([%a%d_]+)%s*%)")
     if not mr_name or not column_name then
         error(string.format("Invalid expression: '%s'.", expression))
     end
     local mr_function = FS.get(mr_name)
     local column_id = columns:get_index_by_name(column_name)
-    return MapReduce.new(column_id, column_name, mr_function.map, mr_function.reduce)
+    return MapReduce.new(column_id, column_name, mr_function.map, mr_function.reduce, result_id, mr_function.result_size)
 end
 
 function FS.parse_expression(expression, columns)
@@ -76,8 +77,11 @@ function FS.parse_expression(expression, columns)
     if not expression then
         error("Expression missing.")
     end
+    local result_id = 2
     for expr_item in string.gmatch(expression, "[^,]+") do
-        table.insert(mr_functions, FS.parse_item(expr_item, columns))
+        local mr = FS.parse_item(expr_item, columns, result_id)
+        result_id = result_id + mr.result_size
+        table.insert(mr_functions, mr)
     end
     return mr_functions
 end
