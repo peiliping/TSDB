@@ -96,7 +96,7 @@ end
 
 local function handle_stat(args)
     local table_name = args[2]
-    local db = Database.new(DATA_PATH, table_name)
+    local db = Database.new(DATA_PATH, table_name, args[3])
     local format_str = "| %-50s | %-50s |"
     local line = "====================================================="
     print(string.format(format_str, "Key", "Value"))
@@ -115,10 +115,19 @@ local function handle_stat(args)
 end
 
 local function handle_create(args)
-    local table_name = args[2]
+    local table_name = check_arg("table_name", args[2])
     local db = Database.new(DATA_PATH, table_name)
     local ts_table = db:get_table(table_name)
     ts_table:create()
+end
+
+local function handle_fix(args)
+    local table_name = check_arg("table_name", args[2])
+    local start_time = check_arg("start_ts", tonumber(args[3]))
+    local end_time = check_arg("end_ts", tonumber(args[4]))
+    local db = Database.new(DATA_PATH, table_name, true)
+    local ts_table = db:get_table(table_name)
+    ts_table:savior(start_time, end_time)
 end
 
 local function handle_read(args)
@@ -184,37 +193,50 @@ end
 --------------------------------------------------------------
 
 local COMMANDS = {
-    stat = {
+    {
+        cmd = "stat",
         handler = handle_stat,
-        usage = "tsdb stat [<table_name>]",
+        usage = "tsdb stat [<table_name>] [<safe>]",
         description = "Display statistics for all tables or a specific table."
     },
-    create = {
+    {
+        cmd = "create",
         handler = handle_create,
         usage = "tsdb create <table_name>",
         description = "Create table by touching file and writing headers."
     },
-    read = {
+    {
+        cmd = "fix",
+        handler = handle_fix,
+        usage = "tsdb fix <table_name> <start_ts> <end_ts>",
+        description = "Fix table header flush start_ts and end_ts."
+    },
+    {
+        cmd = "read",
         handler = handle_read,
         usage = "tsdb read <table_name> <start_ts> <end_ts> [<filter_zero>]",
         description = "Read records from a table within a timestamp range."
     },
-    write = {
+    {
+        cmd = "write",
         handler = handle_write,
         usage = "tsdb write <table_name> [<data...>]",
         description = "Write records to a table. Data can be provided as arguments or via stdin."
     },
-    agg = {
+    {
+        cmd = "agg",
         handler = handle_agg,
         usage = "tsdb agg <table_name> <start_ts> <end_ts> <number> <agg_expr> <mode>",
         description = "Perform a Tumbling or Sliding window aggregation and print results."
     },
-    rollup = {
+    {
+        cmd = "rollup",
         handler = handle_rollup,
         usage = "tsdb rollup <source_table> <dest_table> <start_ts> <end_ts>",
         description = "Perform a rollup aggregation from a source table to a destination table."
     },
-    parallel = {
+    {
+        cmd = "parallel",
         handler = handle_parallel,
         usage = "tsdb parallel <source_table> <dest_table> <start_ts> <end_ts> <size>",
         description = "Perform a parallel (sliding window) aggregation from a source table to a destination table."
@@ -226,7 +248,7 @@ local function main(args)
     if not cmd then
         print("Usage:")
         print("")
-        for _, item in pairs(COMMANDS) do
+        for _, item in ipairs(COMMANDS) do
             print("  - " .. item.usage)
             print("")
             print("      " .. item.description)
@@ -234,7 +256,13 @@ local function main(args)
         end
         return
     end
-    local command = COMMANDS[cmd]
+    local command
+    for _, item in ipairs(COMMANDS) do
+        if item.cmd == cmd then
+            command = item
+            break
+        end
+    end
     if not command then
         print("Unknown command : " .. cmd)
         return

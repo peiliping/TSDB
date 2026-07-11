@@ -52,6 +52,39 @@ function DataFile:create()
     self.end_time = 0
 end
 
+function DataFile:flush_header(start_time, end_time)
+    local f = get_file(self.file_path, "r+b")
+    f:write(BinaryTools.pack_header(self.interval, self.record_size, start_time, end_time))
+    f:flush()
+    f:close()
+end
+
+function DataFile:safe_load()
+    local f = get_file(self.file_path, "rb")
+    self.file_size = f:seek("end")
+    self.start_time = 0
+    self.end_time = 0
+    f:seek("set", Headers.header_length)
+    local last_rt = 0
+    while true do
+        local record_bin = f:read(self.record_size)
+        if not record_bin or #record_bin < self.record_size then
+            break
+        end
+        local rt = BinaryTools.unpack_record_time(record_bin) * self.interval
+        if rt > 0 then
+            if self.start_time == 0 then
+                self.start_time = rt
+            end
+            last_rt = rt
+        else
+            break
+        end
+    end
+    self.end_time = math.max(self.start_time, last_rt - self.interval)
+    f:close()
+end
+
 function DataFile:load()
     local f = get_file(self.file_path, "rb")
     local binary = f:read(Headers.header_length)

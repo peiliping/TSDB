@@ -54,6 +54,25 @@ function DataTable.new(name, config, file_path)
     return self
 end
 
+function DataTable.safe_new(name, config, file_path)
+    local self = setmetatable({}, DataTable)
+    self.name = name
+    self.config = config
+    self.columns = Columns.new(config_to_cols(config))
+    self.data_file = DataFile.new(file_path, config.block_size,
+            self.columns:get_interval(), self.columns.record_size)
+    self.initialized = self.data_file:exist()
+    if self.initialized then
+        self.data_file:safe_load()
+    end
+    self.interval = self.data_file.interval
+    return self
+end
+
+function DataTable:savior(start_time, end_time)
+    self.data_file:flush_header(start_time, end_time)
+end
+
 function DataTable:create()
     if not self.initialized then
         self.data_file:create()

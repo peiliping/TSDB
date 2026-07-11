@@ -12,14 +12,18 @@ local function get_file_path(root_path, table_name)
     return root_path .. table_name .. ".bin"
 end
 
-function DB.new(root_path, v_table_name)
+function DB.new(root_path, v_table_name, safe)
     local self = setmetatable({}, DB)
     self.root_path = root_path
     self.data_tables = {}
     for table_name, config in pairs(Config) do
         if not v_table_name or v_table_name == table_name then
             local path = get_file_path(self.root_path, table_name)
-            self.data_tables[table_name] = DataTable.new(table_name, config, path)
+            if safe then
+                self.data_tables[table_name] = DataTable.safe_new(table_name, config, path)
+            else
+                self.data_tables[table_name] = DataTable.new(table_name, config, path)
+            end
         end
     end
     if v_table_name and not self.data_tables[v_table_name] then

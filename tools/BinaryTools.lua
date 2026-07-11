@@ -58,4 +58,8 @@ function B.unpack_record_data(columns, record_binary, offset)
     return data_list, nil_flags, unpacked[#unpacked]
 end
 
+function B.unpack_record_time(record_binary)
+    return string.unpack("<I4", string.sub(record_binary, 5, 8))
+end
+
 return B
