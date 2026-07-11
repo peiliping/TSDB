@@ -39,7 +39,7 @@ local function execute_rollup(src_table, dest_table, start_ts, end_ts)
     local aggs = Functions.parse_expression(src_table.config.rollup_expr, src_table.columns)
     local records = src_table:query_agg_tumbling(start_ts, end_ts, dest_table.interval, aggs)
     local batch = Batch.new(dest_table.columns, false)
-    Tools.result_to_batch(records, batch)
+    batch:add_datas(records)
     print(dest_table:write_records(batch))
 end
 
@@ -47,7 +47,7 @@ local function execute_parallel(src_table, dest_table, start_ts, end_ts, size)
     local aggs = Functions.parse_expression(src_table.config.parallel_expr, src_table.columns)
     local records = src_table:query_agg_sliding(start_ts, end_ts, size, aggs)
     local batch = Batch.new(dest_table.columns, false)
-    Tools.result_to_batch(records, batch)
+    batch:add_datas(records)
     print(dest_table:write_records(batch))
 end
 

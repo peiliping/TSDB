@@ -9,13 +9,4 @@ function T.print_table(source)
     end
 end
 
-function T.result_to_batch(source, batch)
-    if type(source) ~= "table" then
-        return
-    end
-    for _, row in ipairs(source) do
-        batch:add(row)
-    end
-end
-
 return T

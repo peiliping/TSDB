@@ -55,6 +55,12 @@ function Batch:add(data, nil_flags)
     table.insert(self.nil_flags, nil_flags)
 end
 
+function Batch:add_datas(datas)
+    for _, data in ipairs(datas) do
+        self:add(data)
+    end
+end
+
 function Batch:add_record(record)
     self:add(record.data, record.nil_flags)
 end
