@@ -139,8 +139,13 @@ end
 local function scan_reduce(mr_functions, agg_record, column_datas)
     for i = #mr_functions, 1, -1 do
         local mr = mr_functions[i]
-        for j = 1, mr.result_size do
-            agg_record[mr.result_id + j - 1] = mr.reduce(agg_record[i + 1], column_datas and column_datas[mr.column_id])
+        local result = mr.reduce(agg_record[i + 1], column_datas and column_datas[mr.column_id])
+        if mr.result_size == 1 then
+            agg_record[mr.result_id] = result
+        else
+            for j = 1, mr.result_size do
+                agg_record[mr.result_id + j - 1] = result[j]
+            end
         end
     end
 end
