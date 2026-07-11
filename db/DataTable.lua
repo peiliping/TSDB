@@ -84,12 +84,12 @@ end
 function DataTable:get_stat()
     if self.initialized then
         return {
-            start_time = self.data_file.start_time,
-            end_time = self.data_file.end_time,
-            interval = self.data_file.interval,
-            file_size = self.data_file.file_size,
-            record_size = self.data_file.record_size,
-            estimated_rows = self.data_file:count(),
+            { key = "interval", val = self.data_file.interval },
+            { key = "start_time", val = self.data_file.start_time },
+            { key = "end_time", val = self.data_file.end_time },
+            { key = "record_size", val = self.data_file.record_size },
+            { key = "file_size", val = self.data_file.file_size },
+            { key = "estimated_rows", val = self.data_file:count() },
         }
     end
     return nil

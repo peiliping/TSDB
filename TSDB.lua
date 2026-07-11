@@ -6,49 +6,12 @@ local Database = require("db.Database")
 local Functions = require("aggregate.Functions")
 local Tools = require("tools.Tools")
 local Batch = require("record.Batch")
-local Record = require("record.Record")
 
 local function check_arg(name, value)
     if not value then
         error("Argument '" .. name .. "' missing or invalid.")
     end
     return value
-end
-
-local function execute_query(ts_table, start_ts, end_ts, filter_zero)
-    local group = ts_table:query_group(start_ts, end_ts, 10000, filter_zero)
-    local cache = {}
-    for record in group:iterator() do
-        print(record:to_string(cache))
-    end
-end
-
-local function execute_agg_tumbling(ts_table, start_ts, end_ts, new_interval, expr)
-    local aggs = Functions.parse_expression(expr, ts_table.columns)
-    local records = ts_table:query_agg_tumbling(start_ts, end_ts, new_interval, aggs)
-    Tools.print_table(records)
-end
-
-local function execute_agg_sliding(ts_table, start_ts, end_ts, sliding_size, expr)
-    local aggs = Functions.parse_expression(expr, ts_table.columns)
-    local records = ts_table:query_agg_sliding(start_ts, end_ts, sliding_size, aggs)
-    Tools.print_table(records)
-end
-
-local function execute_rollup(src_table, dest_table, start_ts, end_ts)
-    local aggs = Functions.parse_expression(src_table.config.rollup_expr, src_table.columns)
-    local records = src_table:query_agg_tumbling(start_ts, end_ts, dest_table.interval, aggs)
-    local batch = Batch.new(dest_table.columns, false)
-    batch:add_datas(records)
-    print(dest_table:write_records(batch))
-end
-
-local function execute_parallel(src_table, dest_table, start_ts, end_ts, size)
-    local aggs = Functions.parse_expression(src_table.config.parallel_expr, src_table.columns)
-    local records = src_table:query_agg_sliding(start_ts, end_ts, size, aggs)
-    local batch = Batch.new(dest_table.columns, false)
-    batch:add_datas(records)
-    print(dest_table:write_records(batch))
 end
 
 local function execute_write(ts_table, args)
@@ -108,8 +71,8 @@ local function handle_stat(args)
         if stat == nil then
             print(string.format(format_str, "Status", "Not-Ready"))
         else
-            for key, value in pairs(stat) do
-                print(string.format(format_str, key, value))
+            for i, t in ipairs(stat) do
+                print(string.format(format_str, t.key, t.val))
             end
         end
     end
@@ -133,30 +96,44 @@ end
 
 local function handle_read(args)
     local table_name = check_arg("table_name", args[2])
-    local start_time = check_arg("start_ts", tonumber(args[3]))
-    local end_time = check_arg("end_ts", tonumber(args[4]))
+    local start_ts = check_arg("start_ts", tonumber(args[3]))
+    local end_ts = check_arg("end_ts", tonumber(args[4]))
     local filter_zero = (args[5] and args[5] == "true" or false)
     local db = Database.new(DATA_PATH, table_name)
     local ts_table = db:get_table(table_name)
-    execute_query(ts_table, start_time, end_time, filter_zero)
+    local group = ts_table:query_group(start_ts, end_ts, 10000, filter_zero)
+    local cache = {}
+    for record in group:iterator() do
+        print(record:to_string(cache))
+    end
+end
+
+local function handle_write(args)
+    local table_name = check_arg("table_name", args[2])
+    local db = Database.new(DATA_PATH, table_name)
+    local ts_table = db:get_table(table_name)
+    execute_write(ts_table, args)
 end
 
 local function handle_agg(args)
     local table_name = check_arg("table_name", args[2])
-    local start_time = check_arg("start_ts", tonumber(args[3]))
-    local end_time = check_arg("end_ts", tonumber(args[4]))
+    local start_ts = check_arg("start_ts", tonumber(args[3]))
+    local end_ts = check_arg("end_ts", tonumber(args[4]))
     local num = check_arg("num", tonumber(args[5]))
     local expr = check_arg("expr", args[6])
     local mode = check_arg("mode", args[7])
     local db = Database.new(DATA_PATH, table_name)
     local ts_table = db:get_table(table_name)
+    local aggs = Functions.parse_expression(expr, ts_table.columns)
+    local records
     if mode == "Tumbling" then
-        execute_agg_tumbling(ts_table, start_time, end_time, num, expr)
+        records = ts_table:query_agg_tumbling(start_ts, end_ts, num, aggs)
     elseif mode == "Sliding" then
-        execute_agg_sliding(ts_table, start_time, end_time, num, expr)
+        records = ts_table:query_agg_sliding(start_ts, end_ts, num, aggs)
     else
         error("Unsupported aggregation mode: '" .. mode .. "'. Must be 'Tumbling' or 'Sliding'.")
     end
+    Tools.print_table(records)
 end
 
 local function handle_rollup(args)
@@ -166,9 +143,13 @@ local function handle_rollup(args)
     local dest_db = Database.new(DATA_PATH, dest_table_name)
     local src_table = src_db:get_table(src_table_name)
     local dest_table = dest_db:get_table(dest_table_name)
-    local start_time = check_arg("start_ts", tonumber(args[4]))
-    local end_time = check_arg("end_ts", tonumber(args[5]))
-    execute_rollup(src_table, dest_table, start_time, end_time)
+    local start_ts = check_arg("start_ts", tonumber(args[4]))
+    local end_ts = check_arg("end_ts", tonumber(args[5]))
+    local aggs = Functions.parse_expression(src_table.config.rollup_expr, src_table.columns)
+    local records = src_table:query_agg_tumbling(start_ts, end_ts, dest_table.interval, aggs)
+    local batch = Batch.new(dest_table.columns, false)
+    batch:add_datas(records)
+    print(dest_table:write_records(batch))
 end
 
 local function handle_parallel(args)
@@ -178,17 +159,14 @@ local function handle_parallel(args)
     local dest_db = Database.new(DATA_PATH, dest_table_name, false)
     local src_table = src_db:get_table(src_table_name)
     local dest_table = dest_db:get_table(dest_table_name)
-    local start_time = check_arg("start_ts", tonumber(args[4]))
-    local end_time = check_arg("end_ts", tonumber(args[5]))
+    local start_ts = check_arg("start_ts", tonumber(args[4]))
+    local end_ts = check_arg("end_ts", tonumber(args[5]))
     local size = check_arg("size", tonumber(args[6]))
-    execute_parallel(src_table, dest_table, start_time, end_time, size)
-end
-
-local function handle_write(args)
-    local table_name = check_arg("table_name", args[2])
-    local db = Database.new(DATA_PATH, table_name)
-    local ts_table = db:get_table(table_name)
-    execute_write(ts_table, args)
+    local aggs = Functions.parse_expression(src_table.config.parallel_expr, src_table.columns)
+    local records = src_table:query_agg_sliding(start_ts, end_ts, size, aggs)
+    local batch = Batch.new(dest_table.columns, false)
+    batch:add_datas(records)
+    print(dest_table:write_records(batch))
 end
 
 --------------------------------------------------------------
