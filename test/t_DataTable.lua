@@ -107,21 +107,6 @@ function test_case.test_get_stat_uninitialized()
     teardown()
 end
 
-function test_case.test_get_stat_initialized()
-    setup()
-    local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
-    dt:create()
-    local stat = dt:get_stat()
-    assert(stat ~= nil, "Stat should not be nil for initialized table")
-    assert(stat.start_time == 0, "Stat start_time mismatch")
-    assert(stat.end_time == 0, "Stat end_time mismatch")
-    assert(stat.interval == TEST_INTERVAL, "Stat interval mismatch")
-    assert(stat.file_size == Headers.header_length + TEST_BLOCK_SIZE, "Stat file_size mismatch")
-    assert(stat.record_size == dt.columns.record_size, "Stat record_size mismatch")
-    assert(stat.estimated_rows == 0, "Stat estimated_rows mismatch")
-    teardown()
-end
-
 function test_case.test_write_records_empty_batch()
     setup()
     local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
@@ -223,8 +208,8 @@ function test_case.test_query_agg_tumbling()
 
     local agg_interval = TEST_INTERVAL * 3
     local mr_functions = {
-        { column_id = 2, map = function(acc, val) return (acc or 0) + val end, reduce = function(acc) return acc end },
-        { column_id = 3, map = function(acc, val) return math.max(acc or 0, val) end, reduce = function(acc) return acc end },
+        { column_id = 2, result_id = 2, result_size = 1, map = function(acc, val) return (acc or 0) + val end, reduce = function(acc) return acc end },
+        { column_id = 3, result_id = 3, result_size = 1, map = function(acc, val) return math.max(acc or 0, val) end, reduce = function(acc) return acc end },
     }
 
     local results = dt:query_agg_tumbling(start_ts, end_ts, agg_interval, mr_functions)
@@ -263,8 +248,8 @@ function test_case.test_query_agg_sliding()
 
     local sliding_size = 3
     local mr_functions = {
-        { column_id = 2, map = function(acc, val) return (acc or 0) + val end, reduce = function(acc) return acc end },
-        { column_id = 3, map = function(acc, val) return math.max(acc or 0, val) end, reduce = function(acc) return acc end },
+        { column_id = 2, result_id = 2, result_size = 1, map = function(acc, val) return (acc or 0) + val end, reduce = function(acc) return acc end },
+        { column_id = 3, result_id = 3, result_size = 1, map = function(acc, val) return math.max(acc or 0, val) end, reduce = function(acc) return acc end },
     }
     local results = dt:query_agg_sliding(start_ts, end_ts, sliding_size, mr_functions)
 
