@@ -20,9 +20,9 @@ for _, module_name in ipairs(test_cases) do
     end
     table.sort(test_methods)
     for _, method_name in ipairs(test_methods) do
-        print("test method : " .. method_name)
+        print("Method : " .. method_name)
         test_module[method_name]()
-        print("test result : Passed.")
+        print("Result : Passed.")
     end
     print("----------------------------------------------------------------------------")
 end
