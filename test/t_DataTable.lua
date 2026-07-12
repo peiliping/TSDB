@@ -4,10 +4,11 @@ local DataFile = require("db.DataFile")
 local DataTable = require("db.DataTable")
 
 local Columns = require("record.col.Columns")
-local TimeCol = require("record.col.TimeCol")
-local NumberCol = require("record.col.NumberCol")
 local Record = require("record.Record")
 local Batch = require("record.Batch")
+
+local TableConfig = require("conf.TableConfig")
+local ConfigToColumns = require("conf.ConfigToColumns")
 
 local test_case = {}
 
@@ -16,14 +17,12 @@ local TEST_FILE_PATH = TEST_DIR .. "test_datatable.bin"
 local TEST_BLOCK_SIZE = 1024
 local TEST_INTERVAL = 60
 
-local TEST_CONFIG = {
-    block_size = TEST_BLOCK_SIZE,
-    columns = {
-        { name = "time", type = "timestamp", interval = TEST_INTERVAL },
-        { name = "value1", type = "number", precision = 0, signed = true },
-        { name = "value2", type = "number", precision = 2, signed = false },
-    }
+local TEST_TABLE_CONFIG_COLUMNS = {
+    { name = "time", type = "timestamp", interval = TEST_INTERVAL },
+    { name = "value1", type = "number", precision = 0, signed = true },
+    { name = "value2", type = "number", precision = 2, signed = false },
 }
+local TEST_TABLE_CONFIG = TableConfig.new(TEST_TABLE_CONFIG_COLUMNS, TEST_BLOCK_SIZE)
 
 local function create_real_batch(columns_obj, start_time, count, value_func)
     local batch = Batch.new(columns_obj, false)
@@ -55,7 +54,7 @@ end
 
 function test_case.test_new_uninitialized()
     setup()
-    local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
+    local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)
     assert(dt.name == "test_table", "Name mismatch")
     assert(dt.columns ~= nil, "Columns should be initialized")
     assert(dt.data_file ~= nil, "DataFile should be initialized")
@@ -67,11 +66,8 @@ end
 
 function test_case.test_new_initialized()
     setup()
-    local columns_obj = Columns.new({
-        TimeCol.new("time", TEST_INTERVAL),
-        NumberCol.new("value1", "number"),
-        NumberCol.new("value2", "number", 2)
-    })
+    -- 使用 ConfigToColumns.convert 从 TEST_TABLE_CONFIG 创建 columns_obj
+    local columns_obj = Columns.new(ConfigToColumns.convert(TEST_TABLE_CONFIG))
     local df = DataFile.new(TEST_FILE_PATH, TEST_BLOCK_SIZE, columns_obj:get_interval(), columns_obj.record_size)
     df:create()
 
@@ -81,7 +77,7 @@ function test_case.test_new_initialized()
     df:write(batch_to_write)
     df:load()
 
-    local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
+    local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)
     assert(dt.initialized, "DataTable should be initialized")
     assert(dt.data_file.start_time == start_ts, "DataFile start_time should be loaded")
     assert(dt.data_file.end_time == start_ts + (count - 1) * TEST_INTERVAL, "DataFile end_time should be loaded")
@@ -90,7 +86,7 @@ end
 
 function test_case.test_create()
     setup()
-    local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
+    local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)
     assert(not dt.initialized, "DataTable should not be initialized initially")
     dt:create()
     assert(dt.initialized, "DataTable should be initialized after create()")
@@ -100,14 +96,14 @@ end
 
 function test_case.test_get_stat_uninitialized()
     setup()
-    local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
+    local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)
     assert(dt:get_stat() == nil, "Stat should be nil for uninitialized table")
     teardown()
 end
 
 function test_case.test_write_records_empty_batch()
     setup()
-    local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
+    local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)
     dt:create()
     local empty_batch = Batch.new(dt.columns, false)
     local written = dt:write_records(empty_batch)
@@ -117,7 +113,7 @@ end
 
 function test_case.test_write_records_first_batch()
     setup()
-    local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
+    local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)
     dt:create()
 
     local start_ts = 1200
@@ -133,7 +129,7 @@ end
 
 function test_case.test_write_records_with_gap()
     setup()
-    local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
+    local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)
     dt:create()
 
     local start_ts1 = 1200
@@ -155,7 +151,7 @@ end
 
 function test_case.test_query_records()
     setup()
-    local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
+    local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)
     dt:create()
 
     local start_ts = 1200
@@ -177,7 +173,7 @@ end
 
 function test_case.test_query_group()
     setup()
-    local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
+    local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)
     dt:create()
 
     local start_ts = 1200
@@ -195,7 +191,7 @@ end
 
 function test_case.test_query_agg_tumbling()
     setup()
-    local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
+    local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)
     dt:create()
 
     local start_ts = 1200
@@ -235,7 +231,7 @@ end
 
 function test_case.test_query_agg_sliding()
     setup()
-    local dt = DataTable.new("test_table", TEST_CONFIG, TEST_FILE_PATH)
+    local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)
     dt:create()
 
     local start_ts = 1200
@@ -275,57 +271,42 @@ end
 function test_case.test_new_invalid_column_config()
     setup()
 
-    local config_missing_name = {
-        block_size = TEST_BLOCK_SIZE,
-        columns = {
-            { name = "time", type = "timestamp", interval = TEST_INTERVAL },
-            { type = "number", precision = 0, signed = true },
-        }
-    }
+    -- 注意：这里的配置对象直接传递给 DataTable.new，它会内部调用 ConfigToColumns.convert 和 Columns.new
+    -- 因此，错误消息的来源是这些内部模块
+
+    local config_missing_name = TableConfig.new({
+        { name = "time", type = "timestamp", interval = TEST_INTERVAL },
+        { type = "number", precision = 0, signed = true }, -- 缺少 name
+    }, TEST_BLOCK_SIZE)
     TestTools.assert_error_msg_contains("Column 2: 'name' is missing.", function() DataTable.new("test_table", config_missing_name, TEST_FILE_PATH) end)
 
-    local config_missing_type = {
-        block_size = TEST_BLOCK_SIZE,
-        columns = {
-            { name = "time", type = "timestamp", interval = TEST_INTERVAL },
-            { name = "value1", precision = 0, signed = true },
-        }
-    }
+    local config_missing_type = TableConfig.new({
+        { name = "time", type = "timestamp", interval = TEST_INTERVAL },
+        { name = "value1", precision = 0, signed = true }, -- 缺少 type
+    }, TEST_BLOCK_SIZE)
     TestTools.assert_error_msg_contains(" 'type' is missing.", function() DataTable.new("test_table", config_missing_type, TEST_FILE_PATH) end)
 
-    local config_first_not_timestamp = {
-        block_size = TEST_BLOCK_SIZE,
-        columns = {
-            { name = "value1", type = "number", precision = 0, signed = true },
-            { name = "time", type = "timestamp", interval = TEST_INTERVAL },
-        }
-    }
+    local config_first_not_timestamp = TableConfig.new({
+        { name = "value1", type = "number", precision = 0, signed = true },
+        { name = "time", type = "timestamp", interval = TEST_INTERVAL },
+    }, TEST_BLOCK_SIZE)
     TestTools.assert_error_msg_contains(" must be 'timestamp'.", function() DataTable.new("test_table", config_first_not_timestamp, TEST_FILE_PATH) end)
 
-    local config_invalid_timestamp_interval = {
-        block_size = TEST_BLOCK_SIZE,
-        columns = {
-            { name = "time", type = "timestamp", interval = 0 },
-            { name = "value1", type = "number", precision = 0, signed = true },
-        }
-    }
+    local config_invalid_timestamp_interval = TableConfig.new({
+        { name = "time", type = "timestamp", interval = 0 }, -- 无效的 interval
+        { name = "value1", type = "number", precision = 0, signed = true },
+    }, TEST_BLOCK_SIZE)
     TestTools.assert_error_msg_contains("'interval' must be a positive number.", function() DataTable.new("test_table", config_invalid_timestamp_interval, TEST_FILE_PATH) end)
 
-    local config_exceed_precision = {
-        block_size = TEST_BLOCK_SIZE,
-        columns = {
-            { name = "time", type = "timestamp", interval = TEST_INTERVAL },
-            { name = "value1", type = "number", precision = 100, signed = true },
-        }
-    }
+    local config_exceed_precision = TableConfig.new({
+        { name = "time", type = "timestamp", interval = TEST_INTERVAL },
+        { name = "value1", type = "number", precision = 100, signed = true }, -- 精度超出范围
+    }, TEST_BLOCK_SIZE)
     TestTools.assert_error_msg_contains(" exceeds its max_precision", function() DataTable.new("test_table", config_exceed_precision, TEST_FILE_PATH) end)
 
-    local config_too_few_columns = {
-        block_size = TEST_BLOCK_SIZE,
-        columns = {
-            { name = "time", type = "timestamp", interval = TEST_INTERVAL },
-        }
-    }
+    local config_too_few_columns = TableConfig.new({
+        { name = "time", type = "timestamp", interval = TEST_INTERVAL },
+    }, TEST_BLOCK_SIZE)
     TestTools.assert_error_msg_contains("Columns.new: 'columns_list' must contain at least 2 columns.", function() DataTable.new("test_table", config_too_few_columns, TEST_FILE_PATH) end)
 
     local many_columns = {}
@@ -333,10 +314,7 @@ function test_case.test_new_invalid_column_config()
     for i = 1, 32 do
         table.insert(many_columns, { name = "value" .. i, type = "number" })
     end
-    local config_too_many_columns = {
-        block_size = TEST_BLOCK_SIZE,
-        columns = many_columns
-    }
+    local config_too_many_columns = TableConfig.new(many_columns, TEST_BLOCK_SIZE)
     TestTools.assert_error_msg_contains("Columns.new: 'columns_list' size cannot be greater than 32.", function() DataTable.new("test_table", config_too_many_columns, TEST_FILE_PATH) end)
 
     teardown()
