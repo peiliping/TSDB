@@ -1,3 +1,4 @@
+local Columns = require("record.col.Columns")
 local TimeCol = require("record.col.TimeCol")
 local NumberCol = require("record.col.NumberCol")
 
@@ -21,7 +22,7 @@ function CTC.convert(config)
             table.insert(cols, NumberCol.new(column.name, column.type, column.precision, column.signed))
         end
     end
-    return cols
+    return Columns.new(cols)
 end
 
 return CTC

@@ -2,6 +2,9 @@ local TableConfig = require("conf.TableConfig")
 
 local S = {}
 
+local rollup_expr = "first(open),max(high),min(low),last(close),sum(volume),sum(quote_volume),sum(taker_buy_volume),sum(taker_buy_quote_volume),sum(count),last(long_short_delta),last(open_interest)"
+local parallel_expr = "last(close),lr(close),last(open_interest),lr(open_interest)"
+
 local function create_kline_base(interval_sec)
     local kline_base_columns = {
         { name = "time", type = "timestamp", interval = interval_sec },
@@ -17,7 +20,7 @@ local function create_kline_base(interval_sec)
         { name = "long_short_delta", type = "shortnumber", precision = 3, signed = true },
         { name = "open_interest", type = "number", precision = 3, signed = false },
     }
-    return TableConfig.new(kline_base_columns)
+    return TableConfig.new(kline_base_columns, nil, rollup_expr, parallel_expr)
 end
 
 local function create_kline_ln(interval_sec)

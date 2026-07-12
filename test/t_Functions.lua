@@ -3,13 +3,11 @@ local TestTools = require("test.TestTools")
 local Config = require("conf.Config")
 local ConfigToColumns = require("conf.ConfigToColumns")
 
-local Columns = require("record.col.Columns")
-
 local Functions = require("aggregate.Functions")
 
 local test_case = {}
 
-local real_columns = Columns.new(ConfigToColumns.convert(Config.BTC_KL_5M))
+local real_columns = ConfigToColumns.convert(Config.BTC_KL_5M)
 
 function test_case.test_FS_parse_item()
     local mr_func = Functions.parse_item("sum(open)", real_columns, 2)

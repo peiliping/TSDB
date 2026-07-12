@@ -1,6 +1,5 @@
 local ConfigToColumns = require("conf.ConfigToColumns")
 local DataFile = require("db.DataFile")
-local Columns = require("record.col.Columns")
 local Record = require("record.Record")
 local Batch = require("record.Batch")
 local GroupBatch = require("record.GroupBatch")
@@ -21,7 +20,7 @@ function DataTable.new(name, config, file_path, safe)
     local self = setmetatable({}, DataTable)
     self.name = name
     self.config = config
-    self.columns = Columns.new(ConfigToColumns.convert(config))
+    self.columns = ConfigToColumns.convert(config)
     self.data_file = DataFile.new(file_path, config.block_size, self.columns:get_interval(), self.columns.record_size)
     self.initialized = self.data_file:exist()
     if self.initialized then

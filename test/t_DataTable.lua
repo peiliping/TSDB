@@ -3,7 +3,6 @@ local TestTools = require("test.TestTools")
 local DataFile = require("db.DataFile")
 local DataTable = require("db.DataTable")
 
-local Columns = require("record.col.Columns")
 local Record = require("record.Record")
 local Batch = require("record.Batch")
 
@@ -67,7 +66,7 @@ end
 function test_case.test_new_initialized()
     setup()
     -- 使用 ConfigToColumns.convert 从 TEST_TABLE_CONFIG 创建 columns_obj
-    local columns_obj = Columns.new(ConfigToColumns.convert(TEST_TABLE_CONFIG))
+    local columns_obj = ConfigToColumns.convert(TEST_TABLE_CONFIG)
     local df = DataFile.new(TEST_FILE_PATH, TEST_BLOCK_SIZE, columns_obj:get_interval(), columns_obj.record_size)
     df:create()
 
