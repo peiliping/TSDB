@@ -1,7 +1,10 @@
 local TestTools = require("test.TestTools")
+
 local Config = require("conf.Config")
 local ConfigToColumns = require("conf.ConfigToColumns")
+
 local Columns = require("record.col.Columns")
+
 local Functions = require("aggregate.Functions")
 
 local test_case = {}

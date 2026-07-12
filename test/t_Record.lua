@@ -1,10 +1,12 @@
-local Record = require("record.Record")
-local BitTools = require("tools.BitTools")
-local BinaryTools = require("tools.BinaryTools")
 local TestTools = require("test.TestTools")
+
+local BitTools = require("tools.BitTools")
+
 local Columns = require("record.col.Columns")
-local NumberCol = require("record.col.NumberCol")
 local TimeCol = require("record.col.TimeCol")
+local NumberCol = require("record.col.NumberCol")
+
+local Record = require("record.Record")
 
 local test_case = {}
 

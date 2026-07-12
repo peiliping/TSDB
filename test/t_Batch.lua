@@ -1,11 +1,10 @@
-local Batch = require("record.Batch")
-local Record = require("record.Record")
-local BitTools = require("tools.BitTools")
 local TestTools = require("test.TestTools")
 
 local Columns = require("record.col.Columns")
-local NumberCol = require("record.col.NumberCol")
 local TimeCol = require("record.col.TimeCol")
+local NumberCol = require("record.col.NumberCol")
+local Batch = require("record.Batch")
+local Record = require("record.Record")
 
 local test_case = {}
 

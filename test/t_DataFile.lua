@@ -1,13 +1,14 @@
 local TestTools = require("test.TestTools")
-local DataFile = require("db.DataFile")
-local Headers = require("db.Headers")
+
 local BinaryTools = require("tools.BinaryTools")
 
+local DataFile = require("db.DataFile")
+local Headers = require("db.Headers")
+
 local Columns = require("record.col.Columns")
-local NumberCol = require("record.col.NumberCol")
 local TimeCol = require("record.col.TimeCol")
+local NumberCol = require("record.col.NumberCol")
 local Batch = require("record.Batch")
-local Record = require("record.Record")
 
 local test_case = {}
 

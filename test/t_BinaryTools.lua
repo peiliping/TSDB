@@ -1,9 +1,11 @@
-local BinaryTools = require("tools.BinaryTools")
-local Headers = require("db.Headers")
-local BitTools = require("tools.BitTools")
 local TestTools = require("test.TestTools")
+
+local BinaryTools = require("tools.BinaryTools")
+local BitTools = require("tools.BitTools")
+
 local NumberCol = require("record.col.NumberCol")
-local Types = require("record.col.Types")
+
+local Headers = require("db.Headers")
 
 local test_case = {}
 

@@ -1,15 +1,13 @@
-local DataFile = require("db.DataFile")
-local DataTable = require("db.DataTable")
 local TestTools = require("test.TestTools")
 
+local DataFile = require("db.DataFile")
+local DataTable = require("db.DataTable")
+
+local Columns = require("record.col.Columns")
 local TimeCol = require("record.col.TimeCol")
 local NumberCol = require("record.col.NumberCol")
-local Columns = require("record.col.Columns")
 local Record = require("record.Record")
 local Batch = require("record.Batch")
-local GroupBatch = require("record.GroupBatch")
-local RingBuffer = require("aggregate.RingBuffer")
-local Headers = require("db.Headers")
 
 local test_case = {}
 
