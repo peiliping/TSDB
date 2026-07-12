@@ -1,6 +1,5 @@
+local ConfigToColumns = require("conf.ConfigToColumns")
 local DataFile = require("db.DataFile")
-local TimeCol = require("record.col.TimeCol")
-local NumberCol = require("record.col.NumberCol")
 local Columns = require("record.col.Columns")
 local Record = require("record.Record")
 local Batch = require("record.Batch")
@@ -18,52 +17,19 @@ local DataTable = {
 
 DataTable.__index = DataTable
 
-local function config_to_cols(config)
-    local cols = {}
-    for i, column in ipairs(config.columns) do
-        if not column.name then
-            error(string.format("Column %d: 'name' is missing.", i))
-        end
-        if not column.type then
-            error(string.format("Column %d ('%s'): 'type' is missing.", i, column.name))
-        end
-        if i == 1 then
-            if column.type ~= "timestamp" then
-                error(string.format("Column %d ('time'): 'type' must be 'timestamp'.", i))
-            end
-            table.insert(cols, TimeCol.new(column.name, column.interval))
+function DataTable.new(name, config, file_path, safe)
+    local self = setmetatable({}, DataTable)
+    self.name = name
+    self.config = config
+    self.columns = Columns.new(ConfigToColumns.convert(config))
+    self.data_file = DataFile.new(file_path, config.block_size, self.columns:get_interval(), self.columns.record_size)
+    self.initialized = self.data_file:exist()
+    if self.initialized then
+        if safe then
+            self.data_file:safe_load()
         else
-            table.insert(cols, NumberCol.new(column.name, column.type, column.precision, column.signed))
+            self.data_file:load()
         end
-    end
-    return cols
-end
-
-function DataTable.new(name, config, file_path)
-    local self = setmetatable({}, DataTable)
-    self.name = name
-    self.config = config
-    self.columns = Columns.new(config_to_cols(config))
-    self.data_file = DataFile.new(file_path, config.block_size,
-            self.columns:get_interval(), self.columns.record_size)
-    self.initialized = self.data_file:exist()
-    if self.initialized then
-        self.data_file:load()
-    end
-    self.interval = self.data_file.interval
-    return self
-end
-
-function DataTable.safe_new(name, config, file_path)
-    local self = setmetatable({}, DataTable)
-    self.name = name
-    self.config = config
-    self.columns = Columns.new(config_to_cols(config))
-    self.data_file = DataFile.new(file_path, config.block_size,
-            self.columns:get_interval(), self.columns.record_size)
-    self.initialized = self.data_file:exist()
-    if self.initialized then
-        self.data_file:safe_load()
     end
     self.interval = self.data_file.interval
     return self
@@ -131,6 +97,7 @@ function DataTable:query_records(start_time, end_time, filter_nil)
 end
 
 function DataTable:query_group(start_time, end_time, records_per_batch, filter_nil)
+    self:_check_init()
     local aligned_start = align_to_interval(start_time, self.interval)
     local aligned_end = align_to_interval(end_time, self.interval)
     return GroupBatch.new(self, aligned_start, aligned_end, records_per_batch, filter_nil)
