@@ -19,11 +19,7 @@ function DB.new(root_path, v_table_name, safe)
     for table_name, config in pairs(Config) do
         if not v_table_name or v_table_name == table_name then
             local path = get_file_path(self.root_path, table_name)
-            if not safe and safe then
-                self.data_tables[table_name] = DataTable.safe_new(table_name, config, path)
-            else
-                self.data_tables[table_name] = DataTable.new(table_name, config, path)
-            end
+            self.data_tables[table_name] = DataTable.new(table_name, config, path, safe)
         end
     end
     if v_table_name and not self.data_tables[v_table_name] then

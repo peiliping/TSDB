@@ -60,7 +60,8 @@ end
 
 local function handle_stat(args)
     local table_name = args[2]
-    local db = Database.new(DATA_PATH, table_name, args[3])
+    local safe = (args[3] and args[3] == "true" or false)
+    local db = Database.new(DATA_PATH, table_name, safe)
     local format_str = "| %-50s | %-50s |"
     local line = "====================================================="
     print(string.format(format_str, "Key", "Value"))
