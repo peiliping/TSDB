@@ -1,42 +1,81 @@
-local Functions = require("aggregate.Functions")
 local TestTools = require("test.TestTools")
+local Config = require("conf.Config")
+local ConfigToColumns = require("conf.ConfigToColumns")
+local Columns = require("record.col.Columns")
+local Functions = require("aggregate.Functions")
 
 local test_case = {}
 
+local real_columns = Columns.new(ConfigToColumns.convert(Config.BTC_KL_5M))
+
 function test_case.test_FS_parse_item()
-    local mock_columns = {
-        get_index_by_name = function(_, name)
-            if name == "col1" then return 1 end
-            if name == "col2" then return 2 end
-            if name == "col3" then error("Column index not found for name: " .. tostring(name)) end
-            return nil
-        end
-    }
-
-    -- Test valid expression
-    local mr_func = Functions.parse_item("sum(col1)", mock_columns)
+    local mr_func = Functions.parse_item("sum(open)", real_columns, 2)
     assert(mr_func ~= nil)
-    assert(mr_func.column_id == 1)
-    assert(mr_func.column_name == "col1")
+    assert(mr_func.column_id == real_columns:get_index_by_name("open"))
+    assert(mr_func.column_name == "open")
     assert(type(mr_func.map) == "function")
     assert(type(mr_func.reduce) == "function")
+    assert(mr_func.result_id == 2)
+    assert(mr_func.result_size == 1)
 
-    -- Test another valid expression
-    mr_func = Functions.parse_item("avg(col2)", mock_columns)
+    mr_func = Functions.parse_item("avg(close)", real_columns, 2)
     assert(mr_func ~= nil)
-    assert(mr_func.column_id == 2)
-    assert(mr_func.column_name == "col2")
+    assert(mr_func.column_id == real_columns:get_index_by_name("close"))
+    assert(mr_func.column_name == "close")
     assert(type(mr_func.map) == "function")
     assert(type(mr_func.reduce) == "function")
+    assert(mr_func.result_id == 2)
+    assert(mr_func.result_size == 1)
 
-    -- Test invalid expression format
-    TestTools.assert_error_msg_contains("Invalid expression: 'sum col1'.", function() -- Changed
-        Functions.parse_item("sum col1", mock_columns)
+    TestTools.assert_error_msg_contains("Invalid expression: 'sum open'.", function()
+        Functions.parse_item("sum open", real_columns)
     end)
 
-    -- Test unknown column
-    TestTools.assert_error_msg_contains("Column index not found for name: col3", function() -- Changed
-        Functions.parse_item("sum(col3)", mock_columns)
+    TestTools.assert_error_msg_contains("Column index not found for name: non_existent_col", function()
+        Functions.parse_item("sum(non_existent_col)", real_columns)
+    end)
+end
+
+function test_case.test_FS_parse_expression()
+    local mr_funcs = Functions.parse_expression("sum(volume)", real_columns)
+    assert(#mr_funcs == 1)
+    assert(mr_funcs[1].column_id == real_columns:get_index_by_name("volume"))
+    assert(mr_funcs[1].column_name == "volume")
+    assert(mr_funcs[1].result_id == 2)
+    assert(mr_funcs[1].result_size == 1)
+
+    mr_funcs = Functions.parse_expression("sum(open),avg(close),max(high)", real_columns)
+    assert(#mr_funcs == 3)
+
+    assert(mr_funcs[1].column_id == real_columns:get_index_by_name("open"))
+    assert(mr_funcs[1].column_name == "open")
+    assert(mr_funcs[1].result_id == 2)
+    assert(mr_funcs[1].result_size == 1)
+
+    assert(mr_funcs[2].column_id == real_columns:get_index_by_name("close"))
+    assert(mr_funcs[2].column_name == "close")
+    assert(mr_funcs[2].result_id == 3)
+    assert(mr_funcs[2].result_size == 1)
+
+    assert(mr_funcs[3].column_id == real_columns:get_index_by_name("high"))
+    assert(mr_funcs[3].column_name == "high")
+    assert(mr_funcs[3].result_id == 4)
+    assert(mr_funcs[3].result_size == 1)
+
+    TestTools.assert_error_msg_contains("Unknown MR : unknown_func", function()
+        Functions.parse_expression("unknown_func(open)", real_columns)
+    end)
+
+    TestTools.assert_error_msg_contains("Invalid expression: 'sum open'.", function()
+        Functions.parse_expression("sum open", real_columns)
+    end)
+
+    TestTools.assert_error_msg_contains("Column index not found for name: non_existent_col", function()
+        Functions.parse_expression("sum(open),avg(non_existent_col)", real_columns)
+    end)
+
+    TestTools.assert_error_msg_contains("Expression missing.", function()
+        Functions.parse_expression(nil, real_columns)
     end)
 end
 
