@@ -3,6 +3,7 @@ local DATA_PATH = ROOT_PATH .. "/data/"
 package.path = package.path .. ";" .. ROOT_PATH .. "/?.lua"
 
 local Database = require("db.Database")
+local DataTable = require("db.DataTable")
 local Functions = require("aggregate.Functions")
 local Batch = require("record.Batch")
 
@@ -47,17 +48,17 @@ local function handle_fix(args)
     local end_time = check_arg("end_ts", tonumber(args[4]))
     local db = Database.new(DATA_PATH, table_name, true)
     local ts_table = db:get_table(table_name)
-    ts_table:savior(start_time, end_time)
+    ts_table:flush_header(start_time, end_time)
 end
 
 local function handle_read(args)
     local table_name = check_arg("table_name", args[2])
     local start_ts = check_arg("start_ts", tonumber(args[3]))
     local end_ts = check_arg("end_ts", tonumber(args[4]))
-    local filter_zero = (args[5] and args[5] == "true" or false)
+    local filter_nil = (args[5] and args[5] == "true" or false)
     local db = Database.new(DATA_PATH, table_name)
     local ts_table = db:get_table(table_name)
-    local group = ts_table:query_group(start_ts, end_ts, 10000, filter_zero)
+    local group = ts_table:query_group(start_ts, end_ts, filter_nil)
     local cache = {}
     for record in group:iterator() do
         print(record:to_string(cache))
@@ -105,7 +106,7 @@ local function handle_write(args)
             end
             batch:add(record)
             count = count + 1
-            if count >= 10000 then
+            if count >= DataTable.LIMIT_SIZE then
                 print(ts_table:write_records(batch))
                 batch = Batch.new(ts_table.columns, false)
                 count = 0
@@ -206,7 +207,7 @@ local COMMANDS = {
     {
         cmd = "read",
         handler = handle_read,
-        usage = "tsdb read <table_name> <start_ts> <end_ts> [<filter_zero>]",
+        usage = "tsdb read <table_name> <start_ts> <end_ts> [<filter_nil>]",
         description = "Read records from a table within a timestamp range."
     },
     {

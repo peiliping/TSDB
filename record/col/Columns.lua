@@ -1,7 +1,9 @@
 local Types = require("record.col.Types")
+local NumberCol = require("record.col.NumberCol")
 local BitTools = require("tools.BitTools")
 
 local Columns = {
+    NIL_FLAG_COL = NumberCol.new("nil_flag", "number", 0, false),
     cols = nil,
     name_to_index = nil,
     record_size = nil,
@@ -25,11 +27,10 @@ function Columns.new(columns_list)
     if not first_col or first_col.type_name ~= "timestamp" then
         error("Columns.new: The first column must be of type 'timestamp'.")
     end
-    local nil_flags_type = Types.get("number")
     self.cols = columns_list
     self.name_to_index = {}
-    self.record_size = nil_flags_type.size
-    self.format_string = nil_flags_type.format_unsigned
+    self.record_size = NIL_FLAG_COL.size
+    self.format_string = NIL_FLAG_COL.format
     self.nil_record_flags = BitTools.calculate_nil_record_flags(#columns_list)
     for i, col in ipairs(columns_list) do
         self.name_to_index[col.name] = i

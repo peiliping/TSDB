@@ -117,7 +117,9 @@ function test_case.test_write_records_first_batch()
 
     local start_ts = 1200
     local count = 3
-    local batch = create_real_batch(dt.columns, start_ts, count, function(i, ts) return {i + 1, (i + 1) + 0.1} end)
+    local batch = create_real_batch(dt.columns, start_ts, count, function(i, ts)
+        return { i + 1, (i + 1) + 0.1 }
+    end)
 
     local written = dt:write_records(batch)
     assert(written == count, "Should write " .. count .. " records")
@@ -133,13 +135,17 @@ function test_case.test_write_records_with_gap()
 
     local start_ts1 = 1200
     local count1 = 2
-    local batch1 = create_real_batch(dt.columns, start_ts1, count1, function(i, ts) return {i + 1, (i + 1) + 0.1} end)
+    local batch1 = create_real_batch(dt.columns, start_ts1, count1, function(i, ts)
+        return { i + 1, (i + 1) + 0.1 }
+    end)
     dt:write_records(batch1)
 
     local end_ts1 = start_ts1 + (count1 - 1) * TEST_INTERVAL
     local start_ts2 = end_ts1 + TEST_INTERVAL * 3
     local count2 = 2
-    local batch2 = create_real_batch(dt.columns, start_ts2, count2, function(i, ts) return {i + 4, (i + 4) + 0.4} end)
+    local batch2 = create_real_batch(dt.columns, start_ts2, count2, function(i, ts)
+        return { i + 4, (i + 4) + 0.4 }
+    end)
 
     local written = dt:write_records(batch2)
     assert(written == count2 + 2, "Should write " .. (count2 + 2) .. " records (2 blanks + 2 actual)")
@@ -155,7 +161,9 @@ function test_case.test_query_records()
 
     local start_ts = 1200
     local count = 5
-    local batch_to_write = create_real_batch(dt.columns, start_ts, count, function(i, ts) return {i + 1, (i + 1) + 0.1} end)
+    local batch_to_write = create_real_batch(dt.columns, start_ts, count, function(i, ts)
+        return { i + 1, (i + 1) + 0.1 }
+    end)
     dt:write_records(batch_to_write)
 
     local query_start = start_ts + TEST_INTERVAL
@@ -177,13 +185,12 @@ function test_case.test_query_group()
 
     local start_ts = 1200
     local end_ts = start_ts + TEST_INTERVAL * 5
-    local group_batch = dt:query_group(start_ts, end_ts, 10, false)
+    local group_batch = dt:query_group(start_ts, end_ts, false)
 
     assert(group_batch ~= nil, "GroupBatch should be returned")
     assert(group_batch.data_table == dt, "GroupBatch datatable mismatch")
     assert(group_batch.total_start == start_ts, "GroupBatch start_time mismatch")
     assert(group_batch.total_end == end_ts, "GroupBatch end_time mismatch")
-    assert(group_batch.records_per_batch == 10, "GroupBatch records_per_batch mismatch")
     assert(group_batch.filter_nil == false, "GroupBatch filter_nil mismatch")
     teardown()
 end
@@ -196,13 +203,23 @@ function test_case.test_query_agg_tumbling()
     local start_ts = 1200
     local count = 10
     local end_ts = start_ts + (count - 1) * TEST_INTERVAL
-    local batch_to_write = create_real_batch(dt.columns, start_ts, count, function(i, ts) return {i + 1, (i + 1) + 0.1} end)
+    local batch_to_write = create_real_batch(dt.columns, start_ts, count, function(i, ts)
+        return { i + 1, (i + 1) + 0.1 }
+    end)
     dt:write_records(batch_to_write)
 
     local agg_interval = TEST_INTERVAL * 3
     local mr_functions = {
-        { column_id = 2, result_id = 2, result_size = 1, map = function(acc, val) return (acc or 0) + val end, reduce = function(acc) return acc end },
-        { column_id = 3, result_id = 3, result_size = 1, map = function(acc, val) return math.max(acc or 0, val) end, reduce = function(acc) return acc end },
+        { column_id = 2, result_id = 2, result_size = 1, map = function(acc, val)
+            return (acc or 0) + val
+        end, reduce = function(acc)
+            return acc
+        end },
+        { column_id = 3, result_id = 3, result_size = 1, map = function(acc, val)
+            return math.max(acc or 0, val)
+        end, reduce = function(acc)
+            return acc
+        end },
     }
     local cb = function(rb)
         assert(rb:size() == 4, "Tumbling agg results count mismatch")
@@ -236,13 +253,23 @@ function test_case.test_query_agg_sliding()
     local start_ts = 1200
     local count = 10
     local end_ts = start_ts + (count - 1) * TEST_INTERVAL
-    local batch_to_write = create_real_batch(dt.columns, start_ts, count, function(i, ts) return {i + 1, (i + 1) + 0.1} end)
+    local batch_to_write = create_real_batch(dt.columns, start_ts, count, function(i, ts)
+        return { i + 1, (i + 1) + 0.1 }
+    end)
     dt:write_records(batch_to_write)
 
     local sliding_size = 3
     local mr_functions = {
-        { column_id = 2, result_id = 2, result_size = 1, map = function(acc, val) return (acc or 0) + val end, reduce = function(acc) return acc end },
-        { column_id = 3, result_id = 3, result_size = 1, map = function(acc, val) return math.max(acc or 0, val) end, reduce = function(acc) return acc end },
+        { column_id = 2, result_id = 2, result_size = 1, map = function(acc, val)
+            return (acc or 0) + val
+        end, reduce = function(acc)
+            return acc
+        end },
+        { column_id = 3, result_id = 3, result_size = 1, map = function(acc, val)
+            return math.max(acc or 0, val)
+        end, reduce = function(acc)
+            return acc
+        end },
     }
     local cb = function(rb)
         assert(rb:size() == 8, "Sliding agg results count mismatch")
@@ -277,36 +304,48 @@ function test_case.test_new_invalid_column_config()
         { name = "time", type = "timestamp", interval = TEST_INTERVAL },
         { type = "number", precision = 0, signed = true }, -- 缺少 name
     }, TEST_BLOCK_SIZE)
-    TestTools.assert_error_msg_contains("Column 2: 'name' is missing.", function() DataTable.new("test_table", config_missing_name, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains("Column 2: 'name' is missing.", function()
+        DataTable.new("test_table", config_missing_name, TEST_FILE_PATH)
+    end)
 
     local config_missing_type = TableConfig.new({
         { name = "time", type = "timestamp", interval = TEST_INTERVAL },
         { name = "value1", precision = 0, signed = true }, -- 缺少 type
     }, TEST_BLOCK_SIZE)
-    TestTools.assert_error_msg_contains(" 'type' is missing.", function() DataTable.new("test_table", config_missing_type, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains(" 'type' is missing.", function()
+        DataTable.new("test_table", config_missing_type, TEST_FILE_PATH)
+    end)
 
     local config_first_not_timestamp = TableConfig.new({
         { name = "value1", type = "number", precision = 0, signed = true },
         { name = "time", type = "timestamp", interval = TEST_INTERVAL },
     }, TEST_BLOCK_SIZE)
-    TestTools.assert_error_msg_contains(" must be 'timestamp'.", function() DataTable.new("test_table", config_first_not_timestamp, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains(" must be 'timestamp'.", function()
+        DataTable.new("test_table", config_first_not_timestamp, TEST_FILE_PATH)
+    end)
 
     local config_invalid_timestamp_interval = TableConfig.new({
         { name = "time", type = "timestamp", interval = 0 }, -- 无效的 interval
         { name = "value1", type = "number", precision = 0, signed = true },
     }, TEST_BLOCK_SIZE)
-    TestTools.assert_error_msg_contains("'interval' must be a positive number.", function() DataTable.new("test_table", config_invalid_timestamp_interval, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains("'interval' must be a positive number.", function()
+        DataTable.new("test_table", config_invalid_timestamp_interval, TEST_FILE_PATH)
+    end)
 
     local config_exceed_precision = TableConfig.new({
         { name = "time", type = "timestamp", interval = TEST_INTERVAL },
         { name = "value1", type = "number", precision = 100, signed = true }, -- 精度超出范围
     }, TEST_BLOCK_SIZE)
-    TestTools.assert_error_msg_contains(" exceeds its max_precision", function() DataTable.new("test_table", config_exceed_precision, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains(" exceeds its max_precision", function()
+        DataTable.new("test_table", config_exceed_precision, TEST_FILE_PATH)
+    end)
 
     local config_too_few_columns = TableConfig.new({
         { name = "time", type = "timestamp", interval = TEST_INTERVAL },
     }, TEST_BLOCK_SIZE)
-    TestTools.assert_error_msg_contains("Columns.new: 'columns_list' must contain at least 2 columns.", function() DataTable.new("test_table", config_too_few_columns, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains("Columns.new: 'columns_list' must contain at least 2 columns.", function()
+        DataTable.new("test_table", config_too_few_columns, TEST_FILE_PATH)
+    end)
 
     local many_columns = {}
     table.insert(many_columns, { name = "time", type = "timestamp", interval = TEST_INTERVAL })
@@ -314,7 +353,9 @@ function test_case.test_new_invalid_column_config()
         table.insert(many_columns, { name = "value" .. i, type = "number" })
     end
     local config_too_many_columns = TableConfig.new(many_columns, TEST_BLOCK_SIZE)
-    TestTools.assert_error_msg_contains("Columns.new: 'columns_list' size cannot be greater than 32.", function() DataTable.new("test_table", config_too_many_columns, TEST_FILE_PATH) end)
+    TestTools.assert_error_msg_contains("Columns.new: 'columns_list' size cannot be greater than 32.", function()
+        DataTable.new("test_table", config_too_many_columns, TEST_FILE_PATH)
+    end)
 
     teardown()
 end

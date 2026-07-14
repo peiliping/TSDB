@@ -6,6 +6,7 @@ local GroupBatch = require("record.GroupBatch")
 local RingBuffer = require("aggregate.RingBuffer")
 
 local DataTable = {
+    LIMIT_SIZE = 10000,
     name = nil,
     config = nil,
     columns = nil,
@@ -34,16 +35,16 @@ function DataTable.new(name, config, file_path, safe)
     return self
 end
 
-function DataTable:savior(start_time, end_time)
-    self.data_file:flush_header(start_time, end_time)
-end
-
 function DataTable:create()
     if not self.initialized then
         self.data_file:create()
         self.data_file:load()
         self.initialized = true
     end
+end
+
+function DataTable:flush_header(start_time, end_time)
+    self.data_file:flush_header(start_time, end_time)
 end
 
 function DataTable:get_stat()
@@ -91,18 +92,18 @@ function DataTable:query_records(start_time, end_time, filter_nil)
     local batch = Batch.new(self.columns, filter_nil)
     local aligned_start = align_to_interval(start_time, self.interval)
     local aligned_end = align_to_interval(end_time, self.interval)
-    if (aligned_end - aligned_start) / self.interval > 10000 then
+    if (aligned_end - aligned_start) / self.interval > DataTable.LIMIT_SIZE then
         error("Time Range is too large.")
     end
     self.data_file:read(batch, aligned_start, aligned_end)
     return batch
 end
 
-function DataTable:query_group(start_time, end_time, records_per_batch, filter_nil)
+function DataTable:query_group(start_time, end_time, filter_nil)
     self:_check_init()
     local aligned_start = align_to_interval(start_time, self.interval)
     local aligned_end = align_to_interval(end_time, self.interval)
-    return GroupBatch.new(self, aligned_start, aligned_end, records_per_batch, filter_nil)
+    return GroupBatch.new(self, aligned_start, aligned_end, DataTable.LIMIT_SIZE, filter_nil)
 end
 
 local function scan_reduce(mr_functions, agg_record, column_datas)
@@ -121,8 +122,8 @@ end
 
 function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_functions, callback)
     self:_check_init()
-    local group = self:query_group(start_time, end_time, nil, true)
-    local result = RingBuffer.new(10000)
+    local group = self:query_group(start_time, end_time, true)
+    local result = RingBuffer.new(DataTable.LIMIT_SIZE)
     local cur_agg_time
     local last_agg_time
     local agg_record
@@ -156,8 +157,8 @@ end
 
 function DataTable:query_agg_sliding(start_time, end_time, sliding_size, mr_functions, callback)
     self:_check_init()
-    local group = self:query_group(start_time, end_time, nil, true)
-    local result = RingBuffer.new(10000)
+    local group = self:query_group(start_time, end_time, true)
+    local result = RingBuffer.new(DataTable.LIMIT_SIZE)
     local column_datas = {}
     local col_count = self.columns:count()
     for i = 1, col_count do
