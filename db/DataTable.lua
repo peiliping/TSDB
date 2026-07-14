@@ -27,7 +27,7 @@ function DataTable.new(name, config, file_path, safe)
     if self.initialized then
         if safe then
             self.data_file:safe_load(function(bin)
-                return Record.from_binary(self.columns, bin).get_timestamp()
+                return Record.from_binary(self.columns, bin):get_timestamp()
             end)
         else
             self.data_file:load()
