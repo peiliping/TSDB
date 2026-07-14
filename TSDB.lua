@@ -150,14 +150,13 @@ local function handle_rollup(args)
     local end_ts = check_arg("end_ts", tonumber(args[5]))
     local aggs = Functions.parse_expression(src_table.config.rollup_expr, src_table.columns)
     local cb = function(ring_buffer)
+        local batch = Batch.new(dest_table.columns, false)
         for i = 1, ring_buffer:size() do
-            local batch = Batch.new(dest_table.columns, false)
             batch:add(ring_buffer:get(i))
         end
         print(dest_table:write_records(batch))
     end
     src_table:query_agg_tumbling(start_ts, end_ts, dest_table.interval, aggs, cb)
-    print(dest_table:write_records(batch))
 end
 
 local function handle_parallel(args)
@@ -172,8 +171,8 @@ local function handle_parallel(args)
     local size = check_arg("size", tonumber(args[6]))
     local aggs = Functions.parse_expression(src_table.config.parallel_expr, src_table.columns)
     local cb = function(ring_buffer)
+        local batch = Batch.new(dest_table.columns, false)
         for i = 1, ring_buffer:size() do
-            local batch = Batch.new(dest_table.columns, false)
             batch:add(ring_buffer:get(i))
         end
         print(dest_table:write_records(batch))
