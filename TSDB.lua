@@ -13,56 +13,6 @@ local function check_arg(name, value)
     return value
 end
 
-local function execute_write(ts_table, args)
-    local columns_size = ts_table.columns:count()
-    local batch = Batch.new(ts_table.columns, false)
-    local arg_size = #args - 2 -- args[1] is "write", args[2] is table name
-    if arg_size > 0 then
-        if arg_size ~= columns_size then
-            error("Args Datas Not Match SchemaSize. Expected " .. columns_size .. ", got " .. arg_size .. ".")
-        end
-        local record = {}
-        for i = 1, columns_size do
-            record[i] = tonumber(args[2 + i])
-            if record[i] == nil then
-                error("Invalid number format for argument " .. (2 + i) .. ": " .. args[2 + i])
-            end
-        end
-        batch:add(record)
-        print(ts_table:write_records(batch))
-    else
-        local count = 0
-        while true do
-            local line = io.stdin:read('*l')
-            if line == nil then
-                break
-            end
-            local record = {}
-            local value_count = 0
-            for value in string.gmatch(line, "[^%s]+") do
-                value_count = value_count + 1
-                record[value_count] = tonumber(value)
-                if record[value_count] == nil then
-                    error("Invalid number format in stdin line: '" .. line .. "' for value '" .. value .. "'")
-                end
-            end
-            if value_count ~= columns_size then
-                error(string.format("Stdin Datas Incomplete: Expected %d columns, got %d in line: '%s'.", columns_size, value_count, line))
-            end
-            batch:add(record)
-            count = count + 1
-            if count >= 10000 then
-                print(ts_table:write_records(batch))
-                batch = Batch.new(ts_table.columns, false)
-                count = 0
-            end
-        end
-        if count > 0 then
-            print(ts_table:write_records(batch))
-        end
-    end
-end
-
 local function handle_stat(args)
     local table_name = args[2]
     local safe = (args[3] and args[3] == "true" or false)
@@ -118,7 +68,53 @@ local function handle_write(args)
     local table_name = check_arg("table_name", args[2])
     local db = Database.new(DATA_PATH, table_name)
     local ts_table = db:get_table(table_name)
-    execute_write(ts_table, args)
+    local columns_size = ts_table.columns:count()
+    local batch = Batch.new(ts_table.columns, false)
+    local arg_size = #args - 2 -- args[1] is "write", args[2] is table name
+    if arg_size > 0 then
+        if arg_size ~= columns_size then
+            error("Args Datas Not Match SchemaSize. Expected " .. columns_size .. ", got " .. arg_size .. ".")
+        end
+        local record = {}
+        for i = 1, columns_size do
+            record[i] = tonumber(args[2 + i])
+            if record[i] == nil then
+                error("Invalid number format for argument " .. (2 + i) .. ": " .. args[2 + i])
+            end
+        end
+        batch:add(record)
+        print(ts_table:write_records(batch))
+    else
+        local count = 0
+        while true do
+            local line = io.stdin:read('*l')
+            if line == nil then
+                break
+            end
+            local record = {}
+            local value_count = 0
+            for value in string.gmatch(line, "[^%s]+") do
+                value_count = value_count + 1
+                record[value_count] = tonumber(value)
+                if record[value_count] == nil then
+                    error("Invalid number format in stdin line: '" .. line .. "' for value '" .. value .. "'")
+                end
+            end
+            if value_count ~= columns_size then
+                error(string.format("Stdin Datas Incomplete: Expected %d columns, got %d in line: '%s'.", columns_size, value_count, line))
+            end
+            batch:add(record)
+            count = count + 1
+            if count >= 10000 then
+                print(ts_table:write_records(batch))
+                batch = Batch.new(ts_table.columns, false)
+                count = 0
+            end
+        end
+        if count > 0 then
+            print(ts_table:write_records(batch))
+        end
+    end
 end
 
 local function handle_agg(args)
