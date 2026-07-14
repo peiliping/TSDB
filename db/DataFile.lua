@@ -59,7 +59,7 @@ function DataFile:flush_header(start_time, end_time)
     f:close()
 end
 
-function DataFile:safe_load()
+function DataFile:safe_load(to_record_function)
     local f = get_file(self.file_path, "rb")
     self.file_size = f:seek("end")
     self.start_time = 0
@@ -71,7 +71,7 @@ function DataFile:safe_load()
         if not record_bin or #record_bin < self.record_size then
             break
         end
-        local rt = BinaryTools.unpack_record_time(record_bin) * self.interval
+        local rt = to_record_function(record_bin)
         if rt > 0 then
             if self.start_time == 0 then
                 self.start_time = rt

@@ -1,5 +1,6 @@
 local BitTools = require("tools.BitTools")
 local BinaryTools = require("tools.BinaryTools")
+local Columns = require("record.col.Columns")
 
 local Record = {
     columns = nil,
@@ -19,7 +20,7 @@ function Record.new(columns, data_list, nil_flags)
     if columns:count() < #data_list then
         error("Record.new: Column definition count does not match data value count.")
     end
-    local ts = data_list[1]
+    local ts = data_list[Columns.TIMESTAMP_INDEX]
     local interval = columns:get_interval()
     if ts % interval ~= 0 then
         error("Data Time not match interval.")
@@ -48,7 +49,7 @@ function Record:is_nil_record()
 end
 
 function Record:get_timestamp()
-    return self:get_value_by_index(1)
+    return self:get_value_by_index(Columns.TIMESTAMP_INDEX)
 end
 
 function Record:get_value(column_name)

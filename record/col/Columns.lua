@@ -1,8 +1,11 @@
+local TimeCol = require("record.col.TimeCol")
 local NumberCol = require("record.col.NumberCol")
 local BitTools = require("tools.BitTools")
 
 local Columns = {
     NIL_FLAG_COL = NumberCol.new("nil_flag", "number", 0, false),
+    TIMESTAMP_COL = TimeCol.new("timestamp", 1),
+    TIMESTAMP_INDEX = 1,
     cols = nil,
     name_to_index = nil,
     record_size = nil,
@@ -22,7 +25,7 @@ function Columns.new(columns_list)
     if #columns_list < 2 then
         error("Columns.new: 'columns_list' must contain at least 2 columns.")
     end
-    local first_col = columns_list[1]
+    local first_col = columns_list[Columns.TIMESTAMP_INDEX]
     if not first_col or first_col.type_name ~= "timestamp" then
         error("Columns.new: The first column must be of type 'timestamp'.")
     end
@@ -64,7 +67,7 @@ function Columns:count()
 end
 
 function Columns:get_interval()
-    return self:get_by_index(1).interval
+    return self:get_by_index(Columns.TIMESTAMP_INDEX).interval
 end
 
 return Columns

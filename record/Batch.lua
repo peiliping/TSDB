@@ -1,3 +1,4 @@
+local Columns = require("record.col.Columns")
 local Record = require("record.Record")
 local BitTools = require("tools.BitTools")
 local BinaryTools = require("tools.BinaryTools")
@@ -24,7 +25,7 @@ function Batch.new(columns, filter_nil)
 end
 
 function Batch:add(data, nil_flags)
-    local ts = data[1]
+    local ts = data[Columns.TIMESTAMP_INDEX]
     local interval = self.columns:get_interval()
     if ts % interval ~= 0 then
         error("Data Time not match interval.")
@@ -80,7 +81,7 @@ function Batch:start_time()
     if c == 0 then
         error("Batch is empty.")
     end
-    return self.datas[1][1]
+    return self.datas[1][Columns.TIMESTAMP_INDEX]
 end
 
 function Batch:end_time()
@@ -88,7 +89,7 @@ function Batch:end_time()
     if c == 0 then
         error("Batch is empty.")
     end
-    return self.datas[c][1]
+    return self.datas[c][Columns.TIMESTAMP_INDEX]
 end
 
 function Batch:get_record(index)

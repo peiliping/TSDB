@@ -1,5 +1,5 @@
-local BitTools = require("tools.BitTools")
 local Headers = require("db.Headers")
+local BitTools = require("tools.BitTools")
 local Crc32Tools = require("tools.Crc32Tools")
 
 local B = {}
@@ -56,10 +56,6 @@ function B.unpack_record_data(columns, record_binary, offset)
         end
     end
     return data_list, nil_flags, unpacked[#unpacked]
-end
-
-function B.unpack_record_time(record_binary)
-    return string.unpack("<I4", string.sub(record_binary, 5, 8))
 end
 
 return B
