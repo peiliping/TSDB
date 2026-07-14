@@ -31,13 +31,11 @@ local function execute_write(ts_table, args)
         batch:add(record)
         print(ts_table:write_records(batch))
     else
+        local count = 0
         while true do
             local line = io.stdin:read('*l')
             if line == nil then
                 break
-            end
-            if #line > 10000 then
-                error("Stdin Line Data Too Long.")
             end
             local record = {}
             local value_count = 0
@@ -52,8 +50,16 @@ local function execute_write(ts_table, args)
                 error(string.format("Stdin Datas Incomplete: Expected %d columns, got %d in line: '%s'.", columns_size, value_count, line))
             end
             batch:add(record)
+            count = count + 1
+            if count >= 10000 then
+                print(ts_table:write_records(batch))
+                batch = Batch.new(ts_table.columns, false)
+                count = 0
+            end
         end
-        print(ts_table:write_records(batch))
+        if count > 0 then
+            print(ts_table:write_records(batch))
+        end
     end
 end
 
