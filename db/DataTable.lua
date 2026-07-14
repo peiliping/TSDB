@@ -91,6 +91,9 @@ function DataTable:query_records(start_time, end_time, filter_nil)
     local batch = Batch.new(self.columns, filter_nil)
     local aligned_start = align_to_interval(start_time, self.interval)
     local aligned_end = align_to_interval(end_time, self.interval)
+    if (aligned_end - aligned_start) / self.interval > 10000 then
+        error("Time Range is too large.")
+    end
     self.data_file:read(batch, aligned_start, aligned_end)
     return batch
 end
@@ -116,21 +119,25 @@ local function scan_reduce(mr_functions, agg_record, column_datas)
     end
 end
 
-function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_functions)
+function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_functions, callback)
     self:_check_init()
     local group = self:query_group(start_time, end_time, nil, true)
-    local result = {}
+    local result = RingBuffer.new(10000)
     local cur_agg_time
     local last_agg_time
     local agg_record
     for record in group:iterator() do
         cur_agg_time = align_to_interval(record:get_timestamp(), agg_interval)
         if cur_agg_time ~= last_agg_time then
+            if result:is_full() then
+                callback(result)
+                result:clear()
+            end
             if agg_record then
                 scan_reduce(mr_functions, agg_record)
             end
             agg_record = { cur_agg_time }
-            table.insert(result, agg_record)
+            result:add(agg_record)
             last_agg_time = cur_agg_time
         end
         for i = 1, #mr_functions do
@@ -141,13 +148,16 @@ function DataTable:query_agg_tumbling(start_time, end_time, agg_interval, mr_fun
     if agg_record then
         scan_reduce(mr_functions, agg_record)
     end
-    return result
+    if result:size() > 0 then
+        callback(result)
+        result:clear()
+    end
 end
 
-function DataTable:query_agg_sliding(start_time, end_time, sliding_size, mr_functions)
+function DataTable:query_agg_sliding(start_time, end_time, sliding_size, mr_functions, callback)
     self:_check_init()
     local group = self:query_group(start_time, end_time, nil, true)
-    local result = {}
+    local result = RingBuffer.new(10000)
     local column_datas = {}
     local col_count = self.columns:count()
     for i = 1, col_count do
@@ -160,8 +170,12 @@ function DataTable:query_agg_sliding(start_time, end_time, sliding_size, mr_func
             column_datas[i]:add(record:get_value_by_index(i))
         end
         if seq >= sliding_size then
+            if result:is_full() then
+                callback(result)
+                result:clear()
+            end
             local agg_record = { record:get_timestamp() }
-            table.insert(result, agg_record)
+            result:add(agg_record)
             for i = 1, sliding_size do
                 for k = 1, #mr_functions do
                     local mr = mr_functions[k]
@@ -171,7 +185,10 @@ function DataTable:query_agg_sliding(start_time, end_time, sliding_size, mr_func
             scan_reduce(mr_functions, agg_record, column_datas)
         end
     end
-    return result
+    if result:size() > 0 then
+        callback(result)
+        result:clear()
+    end
 end
 
 return DataTable

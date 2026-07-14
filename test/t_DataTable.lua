@@ -204,27 +204,27 @@ function test_case.test_query_agg_tumbling()
         { column_id = 2, result_id = 2, result_size = 1, map = function(acc, val) return (acc or 0) + val end, reduce = function(acc) return acc end },
         { column_id = 3, result_id = 3, result_size = 1, map = function(acc, val) return math.max(acc or 0, val) end, reduce = function(acc) return acc end },
     }
+    local cb = function(rb)
+        assert(rb:size() == 4, "Tumbling agg results count mismatch")
 
-    local results = dt:query_agg_tumbling(start_ts, end_ts, agg_interval, mr_functions)
+        assert(rb:get(1)[1] == 1080, "Tumbling agg result 1 timestamp mismatch")
+        assert(rb:get(1)[2] == 1, "Tumbling agg result 1 sum mismatch")
+        assert(math.abs(rb:get(1)[3] - 1.1) < 0.001, "Tumbling agg result 1 max mismatch")
 
-    assert(#results == 4, "Tumbling agg results count mismatch")
+        assert(rb:get(2)[1] == 1260, "Tumbling agg result 2 timestamp mismatch")
+        assert(rb:get(2)[2] == 9, "Tumbling agg result 2 sum mismatch")
+        assert(math.abs(rb:get(2)[3] - 4.1) < 0.001, "Tumbling agg result 2 max mismatch")
 
-    assert(results[1][1] == 1080, "Tumbling agg result 1 timestamp mismatch")
-    assert(results[1][2] == 1, "Tumbling agg result 1 sum mismatch")
-    assert(math.abs(results[1][3] - 1.1) < 0.001, "Tumbling agg result 1 max mismatch")
+        assert(rb:get(3)[1] == 1440, "Tumbling agg result 3 timestamp mismatch")
+        assert(rb:get(3)[2] == 18, "Tumbling agg result 3 sum mismatch")
+        assert(math.abs(rb:get(3)[3] - 7.1) < 0.001, "Tumbling agg result 3 max mismatch")
 
-    assert(results[2][1] == 1260, "Tumbling agg result 2 timestamp mismatch")
-    assert(results[2][2] == 9, "Tumbling agg result 2 sum mismatch")
-    assert(math.abs(results[2][3] - 4.1) < 0.001, "Tumbling agg result 2 max mismatch")
+        assert(rb:get(4)[1] == 1620, "Tumbling agg result 4 timestamp mismatch")
+        assert(rb:get(4)[2] == 27, "Tumbling agg result 4 sum mismatch")
+        assert(math.abs(rb:get(4)[3] - 10.1) < 0.001, "Tumbling agg result 4 max mismatch")
 
-    assert(results[3][1] == 1440, "Tumbling agg result 3 timestamp mismatch")
-    assert(results[3][2] == 18, "Tumbling agg result 3 sum mismatch")
-    assert(math.abs(results[3][3] - 7.1) < 0.001, "Tumbling agg result 3 max mismatch")
-
-    assert(results[4][1] == 1620, "Tumbling agg result 4 timestamp mismatch")
-    assert(results[4][2] == 27, "Tumbling agg result 4 sum mismatch")
-    assert(math.abs(results[4][3] - 10.1) < 0.001, "Tumbling agg result 4 max mismatch")
-
+    end
+    dt:query_agg_tumbling(start_ts, end_ts, agg_interval, mr_functions, cb)
     teardown()
 end
 
@@ -244,26 +244,26 @@ function test_case.test_query_agg_sliding()
         { column_id = 2, result_id = 2, result_size = 1, map = function(acc, val) return (acc or 0) + val end, reduce = function(acc) return acc end },
         { column_id = 3, result_id = 3, result_size = 1, map = function(acc, val) return math.max(acc or 0, val) end, reduce = function(acc) return acc end },
     }
-    local results = dt:query_agg_sliding(start_ts, end_ts, sliding_size, mr_functions)
+    local cb = function(rb)
+        assert(rb:size() == 8, "Sliding agg results count mismatch")
 
-    assert(#results == 8, "Sliding agg results count mismatch")
+        assert(rb:get(1)[1] == 1320, "Sliding agg result 1 timestamp mismatch")
+        assert(rb:get(1)[2] == 6, "Sliding agg result 1 sum mismatch")
+        assert(math.abs(rb:get(1)[3] - 3.1) < 0.001, "Sliding agg result 1 max mismatch")
 
-    assert(results[1][1] == 1320, "Sliding agg result 1 timestamp mismatch")
-    assert(results[1][2] == 6, "Sliding agg result 1 sum mismatch")
-    assert(math.abs(results[1][3] - 3.1) < 0.001, "Sliding agg result 1 max mismatch")
+        assert(rb:get(2)[1] == 1380, "Sliding agg result 2 timestamp mismatch")
+        assert(rb:get(2)[2] == 9, "Sliding agg result 2 sum mismatch")
+        assert(math.abs(rb:get(2)[3] - 4.1) < 0.001, "Sliding agg result 2 max mismatch")
 
-    assert(results[2][1] == 1380, "Sliding agg result 2 timestamp mismatch")
-    assert(results[2][2] == 9, "Sliding agg result 2 sum mismatch")
-    assert(math.abs(results[2][3] - 4.1) < 0.001, "Sliding agg result 2 max mismatch")
+        assert(rb:get(3)[1] == 1440, "Sliding agg result 3 timestamp mismatch")
+        assert(rb:get(3)[2] == 12, "Sliding agg result 3 sum mismatch")
+        assert(math.abs(rb:get(3)[3] - 5.1) < 0.001, "Sliding agg result 3 max mismatch")
 
-    assert(results[3][1] == 1440, "Sliding agg result 3 timestamp mismatch")
-    assert(results[3][2] == 12, "Sliding agg result 3 sum mismatch")
-    assert(math.abs(results[3][3] - 5.1) < 0.001, "Sliding agg result 3 max mismatch")
-
-    assert(results[8][1] == 1740, "Sliding agg result 8 timestamp mismatch")
-    assert(results[8][2] == 27, "Sliding agg result 8 sum mismatch")
-    assert(math.abs(results[8][3] - 10.1) < 0.001, "Sliding agg result 8 max mismatch")
-
+        assert(rb:get(8)[1] == 1740, "Sliding agg result 8 timestamp mismatch")
+        assert(rb:get(8)[2] == 27, "Sliding agg result 8 sum mismatch")
+        assert(math.abs(rb:get(8)[3] - 10.1) < 0.001, "Sliding agg result 8 max mismatch")
+    end
+    dt:query_agg_sliding(start_ts, end_ts, sliding_size, mr_functions, cb)
     teardown()
 end
 

@@ -4,7 +4,6 @@ package.path = package.path .. ";" .. ROOT_PATH .. "/?.lua"
 
 local Database = require("db.Database")
 local Functions = require("aggregate.Functions")
-local Tools = require("tools.Tools")
 local Batch = require("record.Batch")
 
 local function check_arg(name, value)
@@ -37,7 +36,7 @@ local function execute_write(ts_table, args)
             if line == nil then
                 break
             end
-            if #line > 1024 then
+            if #line > 10000 then
                 error("Stdin Line Data Too Long.")
             end
             local record = {}
@@ -126,15 +125,18 @@ local function handle_agg(args)
     local db = Database.new(DATA_PATH, table_name)
     local ts_table = db:get_table(table_name)
     local aggs = Functions.parse_expression(expr, ts_table.columns)
-    local records
+    local cb = function(ring_buffer)
+        for i = 1, ring_buffer:size() do
+            print(table.concat(ring_buffer:get(i), " "))
+        end
+    end
     if mode == "Tumbling" then
-        records = ts_table:query_agg_tumbling(start_ts, end_ts, num, aggs)
+        ts_table:query_agg_tumbling(start_ts, end_ts, num, aggs, cb)
     elseif mode == "Sliding" then
-        records = ts_table:query_agg_sliding(start_ts, end_ts, num, aggs)
+        ts_table:query_agg_sliding(start_ts, end_ts, num, aggs, cb)
     else
         error("Unsupported aggregation mode: '" .. mode .. "'. Must be 'Tumbling' or 'Sliding'.")
     end
-    Tools.print_table(records)
 end
 
 local function handle_rollup(args)
@@ -147,9 +149,14 @@ local function handle_rollup(args)
     local start_ts = check_arg("start_ts", tonumber(args[4]))
     local end_ts = check_arg("end_ts", tonumber(args[5]))
     local aggs = Functions.parse_expression(src_table.config.rollup_expr, src_table.columns)
-    local records = src_table:query_agg_tumbling(start_ts, end_ts, dest_table.interval, aggs)
-    local batch = Batch.new(dest_table.columns, false)
-    batch:add_datas(records)
+    local cb = function(ring_buffer)
+        for i = 1, ring_buffer:size() do
+            local batch = Batch.new(dest_table.columns, false)
+            batch:add(ring_buffer:get(i))
+        end
+        print(dest_table:write_records(batch))
+    end
+    src_table:query_agg_tumbling(start_ts, end_ts, dest_table.interval, aggs, cb)
     print(dest_table:write_records(batch))
 end
 
@@ -164,10 +171,14 @@ local function handle_parallel(args)
     local end_ts = check_arg("end_ts", tonumber(args[5]))
     local size = check_arg("size", tonumber(args[6]))
     local aggs = Functions.parse_expression(src_table.config.parallel_expr, src_table.columns)
-    local records = src_table:query_agg_sliding(start_ts, end_ts, size, aggs)
-    local batch = Batch.new(dest_table.columns, false)
-    batch:add_datas(records)
-    print(dest_table:write_records(batch))
+    local cb = function(ring_buffer)
+        for i = 1, ring_buffer:size() do
+            local batch = Batch.new(dest_table.columns, false)
+            batch:add(ring_buffer:get(i))
+        end
+        print(dest_table:write_records(batch))
+    end
+    src_table:query_agg_sliding(start_ts, end_ts, size, aggs, cb)
 end
 
 --------------------------------------------------------------

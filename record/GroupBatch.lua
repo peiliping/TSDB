@@ -19,7 +19,7 @@ function Group.new(data_table, start_time, end_time, records_per_batch, filter_n
     self.interval = data_table.interval
     self.total_start = start_time
     self.total_end = end_time
-    self.records_per_batch = records_per_batch or 100000
+    self.records_per_batch = records_per_batch or 10000
     self.chunk_duration = (self.records_per_batch - 1) * self.interval
     self.filter_nil = filter_nil or false
 
