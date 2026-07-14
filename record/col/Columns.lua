@@ -1,4 +1,3 @@
-local Types = require("record.col.Types")
 local NumberCol = require("record.col.NumberCol")
 local BitTools = require("tools.BitTools")
 
@@ -29,8 +28,8 @@ function Columns.new(columns_list)
     end
     self.cols = columns_list
     self.name_to_index = {}
-    self.record_size = NIL_FLAG_COL.size
-    self.format_string = NIL_FLAG_COL.format
+    self.record_size = Columns.NIL_FLAG_COL.size
+    self.format_string = Columns.NIL_FLAG_COL.format
     self.nil_record_flags = BitTools.calculate_nil_record_flags(#columns_list)
     for i, col in ipairs(columns_list) do
         self.name_to_index[col.name] = i
