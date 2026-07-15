@@ -3,11 +3,11 @@ local TestTools = require("test.TestTools")
 local DataFile = require("db.DataFile")
 local DataTable = require("db.DataTable")
 
+local Columns = require("record.col.Columns")
 local Record = require("record.Record")
 local Batch = require("record.Batch")
 
 local TableConfig = require("conf.TableConfig")
-local ConfigToColumns = require("conf.ConfigToColumns")
 
 local test_case = {}
 
@@ -65,8 +65,7 @@ end
 
 function test_case.test_new_initialized()
     setup()
-    -- 使用 ConfigToColumns.convert 从 TEST_TABLE_CONFIG 创建 columns_obj
-    local columns_obj = ConfigToColumns.convert(TEST_TABLE_CONFIG)
+    local columns_obj = Columns.from_config(TEST_TABLE_CONFIG)
     local df = DataFile.new(TEST_FILE_PATH, TEST_BLOCK_SIZE, columns_obj:get_interval(), columns_obj.record_size)
     df:create()
 
@@ -296,9 +295,6 @@ end
 
 function test_case.test_new_invalid_column_config()
     setup()
-
-    -- 注意：这里的配置对象直接传递给 DataTable.new，它会内部调用 ConfigToColumns.convert 和 Columns.new
-    -- 因此，错误消息的来源是这些内部模块
 
     local config_missing_name = TableConfig.new({
         { name = "time", type = "timestamp", interval = TEST_INTERVAL },
