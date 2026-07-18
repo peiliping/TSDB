@@ -47,7 +47,8 @@ local FS = {
                 local stdDevAcc = 0
                 for i = 1, size do
                     local p = i * slope + intercept
-                    stdDevAcc = stdDevAcc + math.pow((rb:get(i) - p), 2)
+                    local d = rb:get(i) - p
+                    stdDevAcc = stdDevAcc + d * d
                 end
                 local stdDev = math.sqrt(stdDevAcc / (size - 1))
                 local py = size * slope + intercept
