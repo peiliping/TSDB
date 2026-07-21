@@ -36,12 +36,4 @@ function DB:get_table(table_name)
     return table_val
 end
 
-function DB:scan_tables_stat()
-    local result = {}
-    for table_name, table_val in pairs(self.data_tables) do
-        result[table_name] = table_val:get_stat()
-    end
-    return result
-end
-
 return DB

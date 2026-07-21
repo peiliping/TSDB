@@ -92,13 +92,6 @@ function test_case.test_create()
     teardown()
 end
 
-function test_case.test_get_stat_uninitialized()
-    setup()
-    local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)
-    assert(dt:get_stat() == nil, "Stat should be nil for uninitialized table")
-    teardown()
-end
-
 function test_case.test_write_records_empty_batch()
     setup()
     local dt = DataTable.new("test_table", TEST_TABLE_CONFIG, TEST_FILE_PATH)

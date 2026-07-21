@@ -52,6 +52,7 @@ end
 function DataTable:get_stat()
     if self.initialized then
         return {
+            { key = "TableName", val = self.name },
             { key = "interval", val = self.data_file.interval },
             { key = "start_time", val = self.data_file.start_time },
             { key = "end_time", val = self.data_file.end_time },
@@ -59,8 +60,12 @@ function DataTable:get_stat()
             { key = "file_size", val = self.data_file.file_size },
             { key = "estimated_rows", val = self.data_file:count() },
         }
+    else
+        return {
+            { key = "TableName", val = self.name },
+            { key = "status", val = "not initialized" },
+        }
     end
-    return nil
 end
 
 local function align_to_interval(ts, interval)

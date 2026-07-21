@@ -21,16 +21,11 @@ local function handle_stat(args)
     local format_str = "| %-50s | %-50s |"
     local line = "====================================================="
     print(string.format(format_str, "Key", "Value"))
-    for tbl_name, tbl in pairs(db.data_tables) do
+    for _, tbl in pairs(db.data_tables) do
         print(line .. "=" .. line)
-        print(string.format(format_str, "TableName", tbl_name))
         local stat = tbl:get_stat()
-        if stat == nil then
-            print(string.format(format_str, "Status", "Not-Ready"))
-        else
-            for i, t in ipairs(stat) do
-                print(string.format(format_str, t.key, t.val))
-            end
+        for _, t in ipairs(stat) do
+            print(string.format(format_str, t.key, t.val))
         end
     end
 end
