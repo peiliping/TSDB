@@ -168,13 +168,13 @@ function DataTable:query_agg_sliding(start_time, end_time, sliding_size, mr_func
     local result = RingBuffer.new(DataTable.LIMIT_SIZE)
     local column_datas = {}
     local col_count = self.columns:count()
-    for i = 1, col_count do
+    for i = 2, col_count do
         column_datas[i] = RingBuffer.new(sliding_size)
     end
     local seq = 0
     for record in group:iterator() do
         seq = seq + 1
-        for i = 1, col_count do
+        for i = 2, col_count do
             column_datas[i]:add(record:get_value_by_index(i))
         end
         if seq >= sliding_size then
