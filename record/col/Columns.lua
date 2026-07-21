@@ -3,7 +3,7 @@ local NumberCol = require("record.col.NumberCol")
 local BitTools = require("tools.BitTools")
 
 local Columns = {
-    NIL_FLAG_COL = NumberCol.new("nil_flag", "number", 0, false),
+    NIL_FLAGS_COL = NumberCol.new("nil_flags", "number", 0, false),
     TIMESTAMP_COL = TimeCol.new("timestamp", 1),
     TIMESTAMP_INDEX = 1,
     cols = nil,
@@ -27,12 +27,12 @@ function Columns.new(columns_list)
     end
     local first_col = columns_list[Columns.TIMESTAMP_INDEX]
     if not first_col or first_col.type_name ~= Columns.TIMESTAMP_COL.type_name then
-        error("Columns.new: The first column must be of type 'timestamp'.")
+        error("Columns.new: The first column must be 'timestamp'.")
     end
     self.cols = columns_list
     self.name_to_index = {}
-    self.record_size = Columns.NIL_FLAG_COL.size
-    self.format_string = Columns.NIL_FLAG_COL.format
+    self.record_size = Columns.NIL_FLAGS_COL.size
+    self.format_string = Columns.NIL_FLAGS_COL.format
     self.nil_record_flags = BitTools.calculate_nil_record_flags(#columns_list)
     for i, col in ipairs(columns_list) do
         self.name_to_index[col.name] = i
@@ -51,10 +51,7 @@ function Columns.from_config(config)
         if not column.type then
             error(string.format("Column %d ('%s'): 'type' is missing.", i, column.name))
         end
-        if i == Columns.TIMESTAMP_INDEX then
-            if column.type ~= "timestamp" then
-                error(string.format("Column %d ('time'): 'type' must be 'timestamp'.", i))
-            end
+        if column.type == Columns.TIMESTAMP_COL.type_name then
             table.insert(cols, TimeCol.new(column.name, column.interval))
         else
             table.insert(cols, NumberCol.new(column.name, column.type, column.precision, column.signed))

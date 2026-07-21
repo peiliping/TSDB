@@ -8,7 +8,7 @@ local FS = {
         min   = { map = function(l, r) return l and math.min(l, r) or r end },
         max   = { map = function(l, r) return l and math.max(l, r) or r end },
         sum   = { map = function(l, r) return (l or 0) + r end },
-        avg = {
+        avg   = {
             map = function(l, r)
                 if not l then
                     return { r, 1 }
@@ -21,7 +21,7 @@ local FS = {
                 return v[1] / v[2]
             end
         },
-        lr = {
+        lr    = {
             map = function(cache, v)
                 if not cache then
                     cache = {sumx = 0, sumy = 0, sumxx = 0, sumxy = 0, seq = 0}
