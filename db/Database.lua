@@ -36,4 +36,13 @@ function DB:get_table(table_name)
     return table_val
 end
 
+function DB:scan_tables_stat()
+    local result = {}
+    for _, table_val in pairs(self.data_tables) do
+        table.insert(result, table_val:get_stat())
+    end
+    table.sort(result, function(a, b) return a[1].val < b[1].val end)
+    return result
+end
+
 return DB

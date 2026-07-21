@@ -21,9 +21,8 @@ local function handle_stat(args)
     local format_str = "| %-50s | %-50s |"
     local line = "====================================================="
     print(string.format(format_str, "Key", "Value"))
-    for _, tbl in pairs(db.data_tables) do
+    for _, stat in ipairs(db:scan_tables_stat()) do
         print(line .. "=" .. line)
-        local stat = tbl:get_stat()
         for _, t in ipairs(stat) do
             print(string.format(format_str, t.key, t.val))
         end
