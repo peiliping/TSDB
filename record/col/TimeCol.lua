@@ -6,8 +6,8 @@ local TimeCol = {
 TimeCol.__index = TimeCol
 setmetatable(TimeCol, { __index = BaseCol })
 
-function TimeCol.new(name, interval)
-    local self = setmetatable(BaseCol.new(name, "timestamp"), TimeCol)
+function TimeCol.new(id, name, interval)
+    local self = setmetatable(BaseCol.new(id, name, "timestamp"), TimeCol)
     if not interval or interval <= 0 then
         error(string.format("Column ('%s'): 'interval' must be a positive number.", name))
     end

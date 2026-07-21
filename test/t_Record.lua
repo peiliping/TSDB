@@ -11,8 +11,8 @@ local Record = require("record.Record")
 local test_case = {}
 
 function test_case.test_Record_new()
-    local col1 = TimeCol.new("timestamp", 60)
-    local col2 = NumberCol.new("value", "number", 2, false)
+    local col1 = TimeCol.new(1, "timestamp", 60)
+    local col2 = NumberCol.new(2, "value", "number", 2, false)
     local real_cols = Columns.new({ col1, col2 })
 
     local data = { 12345 * 60, 10.5 }
@@ -47,8 +47,8 @@ function test_case.test_Record_new()
 end
 
 function test_case.test_create_nil_record()
-    local col1 = TimeCol.new("timestamp", 60)
-    local col2 = NumberCol.new("value", "number", 2, false)
+    local col1 = TimeCol.new(1, "timestamp", 60)
+    local col2 = NumberCol.new(2, "value", "number", 2, false)
     local real_cols = Columns.new({ col1, col2 })
 
     local timestamp = os.time()
@@ -64,9 +64,9 @@ function test_case.test_create_nil_record()
 end
 
 function test_case.test_binary_serialization()
-    local col1 = TimeCol.new("timestamp", 60)
-    local col2 = NumberCol.new("value", "number", 2, false)
-    local col3 = NumberCol.new("status", "number", 0, false)
+    local col1 = TimeCol.new(1, "timestamp", 60)
+    local col2 = NumberCol.new(2, "value", "number", 2, false)
+    local col3 = NumberCol.new(3, "status", "number", 0, false)
     local real_cols = Columns.new({ col1, col2, col3 })
 
     local data = { math.floor(os.time() / 60) * 60, 123.45, 1 }
@@ -94,9 +94,9 @@ function test_case.test_binary_serialization()
 end
 
 function test_case.test_data_access()
-    local col1 = TimeCol.new("timestamp", 60)
-    local col2 = NumberCol.new("temperature", "number", 1, false)
-    local col3 = NumberCol.new("humidity", "number", 0, false)
+    local col1 = TimeCol.new(1, "timestamp", 60)
+    local col2 = NumberCol.new(2, "temperature", "number", 1, false)
+    local col3 = NumberCol.new(3, "humidity", "number", 0, false)
     local real_cols = Columns.new({ col1, col2, col3 })
 
     local timestamp = math.floor(os.time() / 60) * 60
@@ -106,7 +106,7 @@ function test_case.test_data_access()
 
     assert(math.abs(record:get_value("temperature") - 25.5) < 0.001, "get_value should return correct value by name")
     assert(record:get_value("humidity") == 60, "get_value should return correct value by name")
-    TestTools.assert_error_msg_contains("Column index not found for name: non_existent", function()
+    TestTools.assert_error_msg_contains("Column not found with name: non_existent", function()
         record:get_value("non_existent")
     end)
 

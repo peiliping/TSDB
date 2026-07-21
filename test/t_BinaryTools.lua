@@ -56,9 +56,9 @@ local function get_raw_format_specifier(col)
 end
 
 function test_case.test_RecordSerialization()
-    local col1 = NumberCol.new("col1", "number", 0, false) -- I4, integer
-    local col2 = NumberCol.new("col2", "number", 2, false) -- f (simulating fixed-precision float), 2 decimal places
-    local col3 = NumberCol.new("col3", "number", 0, false) -- I4, integer
+    local col1 = NumberCol.new(1, "col1", "number", 0, false) -- I4, integer
+    local col2 = NumberCol.new(2, "col2", "number", 2, false) -- f (simulating fixed-precision float), 2 decimal places
+    local col3 = NumberCol.new(3, "col3", "number", 0, false) -- I4, integer
 
     local mock_columns = {
         cols = { col1, col2, col3 },

@@ -25,7 +25,7 @@ function Batch.new(columns, filter_nil)
 end
 
 function Batch:add(data, nil_flags)
-    local ts = data[Columns.TIMESTAMP_INDEX]
+    local ts = data[Columns.TIMESTAMP_COL.id]
     local interval = self.columns:get_interval()
     if ts % interval ~= 0 then
         error("Data Time not match interval.")
@@ -81,7 +81,7 @@ function Batch:start_time()
     if c == 0 then
         error("Batch is empty.")
     end
-    return self.datas[1][Columns.TIMESTAMP_INDEX]
+    return self.datas[1][Columns.TIMESTAMP_COL.id]
 end
 
 function Batch:end_time()
@@ -89,7 +89,7 @@ function Batch:end_time()
     if c == 0 then
         error("Batch is empty.")
     end
-    return self.datas[c][Columns.TIMESTAMP_INDEX]
+    return self.datas[c][Columns.TIMESTAMP_COL.id]
 end
 
 function Batch:get_record(index)

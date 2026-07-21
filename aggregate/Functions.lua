@@ -69,7 +69,7 @@ function FS.parse_item(expression, columns, result_id)
         error(string.format("Invalid expression: '%s'.", expression))
     end
     local mr_function = FS.get(mr_name)
-    local column_id = columns:get_index_by_name(column_name)
+    local column_id = columns:get_by_name(column_name).id
     return MapReduce.new(column_id, column_name, mr_function.map, mr_function.reduce, result_id, mr_function.result_size)
 end
 

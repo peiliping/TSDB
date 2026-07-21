@@ -3,11 +3,9 @@ local NumberCol = require("record.col.NumberCol")
 local BitTools = require("tools.BitTools")
 
 local Columns = {
-    NIL_FLAGS_COL = NumberCol.new("nil_flags", "number", 0, false),
-    TIMESTAMP_COL = TimeCol.new("timestamp", 1),
-    TIMESTAMP_INDEX = 1,
+    NIL_FLAGS_COL = NumberCol.new(0, "nil_flags", "number", 0, false),
+    TIMESTAMP_COL = TimeCol.new(1, "timestamp", 1),
     cols = nil,
-    name_to_index = nil,
     record_size = nil,
     format_string = nil,
     nil_record_flags = nil,
@@ -25,17 +23,17 @@ function Columns.new(columns_list)
     if #columns_list < 2 then
         error("Columns.new: 'columns_list' must contain at least 2 columns.")
     end
-    local first_col = columns_list[Columns.TIMESTAMP_INDEX]
+    local first_col = columns_list[Columns.TIMESTAMP_COL.id]
     if not first_col or first_col.type_name ~= Columns.TIMESTAMP_COL.type_name then
         error("Columns.new: The first column must be 'timestamp'.")
     end
-    self.cols = columns_list
-    self.name_to_index = {}
+    self.cols = {}
     self.record_size = Columns.NIL_FLAGS_COL.size
     self.format_string = Columns.NIL_FLAGS_COL.format
     self.nil_record_flags = BitTools.calculate_nil_record_flags(#columns_list)
     for i, col in ipairs(columns_list) do
-        self.name_to_index[col.name] = i
+        self.cols[i] = col
+        self.cols[col.name] = col
         self.record_size = self.record_size + col.size
         self.format_string = self.format_string .. col.format
     end
@@ -52,32 +50,28 @@ function Columns.from_config(config)
             error(string.format("Column %d ('%s'): 'type' is missing.", i, column.name))
         end
         if column.type == Columns.TIMESTAMP_COL.type_name then
-            table.insert(cols, TimeCol.new(column.name, column.interval))
+            table.insert(cols, TimeCol.new(i, column.name, column.interval))
         else
-            table.insert(cols, NumberCol.new(column.name, column.type, column.precision, column.signed))
+            table.insert(cols, NumberCol.new(i, column.name, column.type, column.precision, column.signed))
         end
     end
     return Columns.new(cols)
 end
 
-function Columns:get_index_by_name(column_name)
-    local index = self.name_to_index[column_name]
-    if not index then
-        error("Column index not found for name: " .. tostring(column_name))
-    end
-    return index
-end
-
 function Columns:get_by_index(index)
     local col = self.cols[index]
     if not col then
-        error("Column not found at index: " .. tostring(index))
+        error("Column not found with index: " .. tostring(index))
     end
     return col
 end
 
 function Columns:get_by_name(column_name)
-    return self:get_by_index(self:get_index_by_name(column_name))
+    local col = self.cols[column_name]
+    if not col then
+        error("Column not found with name: " .. tostring(column_name))
+    end
+    return col
 end
 
 function Columns:count()
@@ -85,7 +79,7 @@ function Columns:count()
 end
 
 function Columns:get_interval()
-    return self:get_by_index(Columns.TIMESTAMP_INDEX).interval
+    return self:get_by_index(Columns.TIMESTAMP_COL.id).interval
 end
 
 return Columns

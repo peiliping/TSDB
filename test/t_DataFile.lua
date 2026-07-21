@@ -17,8 +17,8 @@ local TEST_FILE = TEST_DIR .. "test_datafile.bin"
 local TEST_BLOCK_SIZE = 1024
 local TEST_INTERVAL = 60
 
-local col_timestamp = TimeCol.new("timestamp", TEST_INTERVAL)
-local col_value = NumberCol.new("value", "number", 0, false)
+local col_timestamp = TimeCol.new(1, "timestamp", TEST_INTERVAL)
+local col_value = NumberCol.new(2, "value", "number", 0, false)
 local real_cols = Columns.new({ col_timestamp, col_value })
 
 local TEST_RECORD_SIZE = real_cols.record_size

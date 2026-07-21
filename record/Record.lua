@@ -20,7 +20,7 @@ function Record.new(columns, data_list, nil_flags)
     if columns:count() < #data_list then
         error("Record.new: Column definition count does not match data value count.")
     end
-    local ts = data_list[Columns.TIMESTAMP_INDEX]
+    local ts = data_list[Columns.TIMESTAMP_COL.id]
     local interval = columns:get_interval()
     if ts % interval ~= 0 then
         error("Data Time not match interval.")
@@ -49,15 +49,15 @@ function Record:is_nil_record()
 end
 
 function Record:get_timestamp()
-    return self:get_value_by_index(Columns.TIMESTAMP_INDEX)
+    return self:get_value_by_index(Columns.TIMESTAMP_COL.id)
 end
 
 function Record:get_value(column_name)
-    return self:get_value_by_index(self.columns:get_index_by_name(column_name))
+    return self:get_value_by_index(self.columns:get_by_name(column_name).id)
 end
 
 function Record:set_value(column_name, value)
-    self:set_value_by_index(self.columns:get_index_by_name(column_name), value)
+    self:set_value_by_index(self.columns:get_by_name(column_name).id, value)
 end
 
 function Record:_check_index(index)
@@ -85,7 +85,7 @@ function Record:set_value_by_index(index, value)
 end
 
 function Record:is_column_nil(column_name)
-    return self:is_column_nil_by_index(self.columns:get_index_by_name(column_name))
+    return self:is_column_nil_by_index(self.columns:get_by_name(column_name).id)
 end
 
 function Record:is_column_nil_by_index(index)

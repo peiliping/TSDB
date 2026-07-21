@@ -1,6 +1,7 @@
 local Types = require("record.col.Types")
 
 local Column = {
+    id = nil,
     name = nil,
     type_name = nil,
     type_def = nil,
@@ -9,8 +10,9 @@ local Column = {
 }
 Column.__index = Column
 
-function Column.new(name, type_name)
+function Column.new(id, name, type_name)
     local self = setmetatable({}, Column)
+    self.id = id
     self.name = name
     self.type_name = type_name
     self.type_def = Types.get(type_name)

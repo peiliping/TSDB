@@ -10,8 +10,8 @@ local test_case = {}
 
 function test_case.test_Batch_new()
     local interval = 60
-    local col1 = TimeCol.new("timestamp", interval)
-    local col2 = NumberCol.new("value", "number", 2, false)
+    local col1 = TimeCol.new(1, "timestamp", interval)
+    local col2 = NumberCol.new(2, "value", "number", 2, false)
 
     local real_cols = Columns.new({ col1, col2 })
 
@@ -32,8 +32,8 @@ end
 
 function test_case.test_Batch_add_records()
     local interval = 60
-    local col1 = TimeCol.new("timestamp", interval)
-    local col2 = NumberCol.new("value", "number", 2, false)
+    local col1 = TimeCol.new(1, "timestamp", interval)
+    local col2 = NumberCol.new(2, "value", "number", 2, false)
     local real_cols = Columns.new({ col1, col2 })
 
     local batch = Batch.new(real_cols)
@@ -80,8 +80,8 @@ end
 
 function test_case.test_Batch_add_multiple_records()
     local interval = 60
-    local col1 = TimeCol.new("timestamp", interval)
-    local col2 = NumberCol.new("value", "number", 2, false)
+    local col1 = TimeCol.new(1, "timestamp", interval)
+    local col2 = NumberCol.new(2, "value", "number", 2, false)
     local real_cols = Columns.new({ col1, col2 })
 
     local batch = Batch.new(real_cols)
@@ -106,8 +106,8 @@ end
 
 function test_case.test_Batch_get_record()
     local interval = 60
-    local col1 = TimeCol.new("timestamp", interval)
-    local col2 = NumberCol.new("value", "number", 2, false)
+    local col1 = TimeCol.new(1, "timestamp", interval)
+    local col2 = NumberCol.new(2, "value", "number", 2, false)
     local real_cols = Columns.new({ col1, col2 })
 
     local batch = Batch.new(real_cols)
@@ -133,9 +133,9 @@ end
 
 function test_case.test_Batch_binary_serialization()
     local interval = 60
-    local col1 = TimeCol.new("timestamp", interval)
-    local col2 = NumberCol.new("value", "number", 2, false)
-    local col3 = NumberCol.new("status", "number", 0, false)
+    local col1 = TimeCol.new(1, "timestamp", interval)
+    local col2 = NumberCol.new(2, "value", "number", 2, false)
+    local col3 = NumberCol.new(3, "status", "number", 0, false)
     local real_cols = Columns.new({ col1, col2, col3 })
 
     local original_batch = Batch.new(real_cols)
