@@ -21,6 +21,6 @@ for _, col in ipairs(H.ES) do
     H.header_format = H.header_format .. col.format
 end
 
-H.crc_format = H.ES.start_time.format .. H.ES.end_time.format
+H.crc_format = H.ES["start_time"].format .. H.ES["end_time"].format
 
 return H

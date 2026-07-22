@@ -27,6 +27,7 @@ local function handle_stat(args)
             print(string.format(format_str, t.key, t.val))
         end
     end
+    print(line .. "=" .. line)
 end
 
 local function handle_create(args)

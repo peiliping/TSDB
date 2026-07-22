@@ -82,4 +82,13 @@ function Columns:get_interval()
     return self:get_by_index(Columns.TIMESTAMP_COL.id).interval
 end
 
+function Columns:check_timestamp(data_list)
+    local interval = self:get_interval()
+    local ts = data_list[Columns.TIMESTAMP_COL.id]
+    if ts % interval ~= 0 then
+        error("Data Time not match interval.")
+    end
+    return ts, interval
+end
+
 return Columns

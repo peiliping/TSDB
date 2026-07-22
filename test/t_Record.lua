@@ -119,24 +119,24 @@ function test_case.test_data_access()
         record:get_value_by_index(4)
     end)
 
-    assert(not record:is_column_nil("temperature"), "temperature should not be nil")
-    assert(not record:is_column_nil_by_index(2), "temperature (index) should not be nil")
+    assert(not record:is_nil_column("temperature"), "temperature should not be nil")
+    assert(not record:is_nil_column_by_index(2), "temperature (index) should not be nil")
 
     record:set_value("temperature", 26.0)
     assert(math.abs(record:get_value("temperature") - 26.0) < 0.001, "set_value should update value")
-    assert(not record:is_column_nil("temperature"), "temperature should still not be nil after update")
+    assert(not record:is_nil_column("temperature"), "temperature should still not be nil after update")
 
     record:set_value("temperature", nil)
     assert(record:get_value("temperature") == nil, "set_value should set to nil")
-    assert(record:is_column_nil("temperature"), "temperature should be nil after setting nil")
+    assert(record:is_nil_column("temperature"), "temperature should be nil after setting nil")
 
     record:set_value_by_index(3, 65)
     assert(record:get_value_by_index(3) == 65, "set_value_by_index should update value")
-    assert(not record:is_column_nil_by_index(3), "humidity should still not be nil after update")
+    assert(not record:is_nil_column_by_index(3), "humidity should still not be nil after update")
 
     record:set_value_by_index(3, nil)
     assert(record:get_value_by_index(3) == nil, "set_value_by_index should set to nil")
-    assert(record:is_column_nil_by_index(3), "humidity should be nil after setting nil")
+    assert(record:is_nil_column_by_index(3), "humidity should be nil after setting nil")
 
     TestTools.assert_error_msg_contains("Index 0 is out of bounds", function()
         record:set_value_by_index(0, 10)

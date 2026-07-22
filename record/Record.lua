@@ -20,13 +20,9 @@ function Record.new(columns, data_list, nil_flags)
     if columns:count() < #data_list then
         error("Record.new: Column definition count does not match data value count.")
     end
-    local ts = data_list[Columns.TIMESTAMP_COL.id]
-    local interval = columns:get_interval()
-    if ts % interval ~= 0 then
-        error("Data Time not match interval.")
-    end
     self.columns = columns
     self.data = data_list
+    self.columns:check_timestamp(data_list)
     if nil_flags then
         self.nil_flags = nil_flags
     else
@@ -84,11 +80,11 @@ function Record:set_value_by_index(index, value)
     self.data[index] = value
 end
 
-function Record:is_column_nil(column_name)
-    return self:is_column_nil_by_index(self.columns:get_by_name(column_name).id)
+function Record:is_nil_column(column_name)
+    return self:is_nil_column_by_index(self.columns:get_by_name(column_name).id)
 end
 
-function Record:is_column_nil_by_index(index)
+function Record:is_nil_column_by_index(index)
     self:_check_index(index)
     return BitTools.check_bit(self.nil_flags, index - 1)
 end

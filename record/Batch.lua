@@ -25,10 +25,9 @@ function Batch.new(columns, filter_nil)
 end
 
 function Batch:add(data, nil_flags)
-    local ts = data[Columns.TIMESTAMP_COL.id]
-    local interval = self.columns:get_interval()
-    if ts % interval ~= 0 then
-        error("Data Time not match interval.")
+    local ts, interval = self.columns:check_timestamp(data)
+    if not nil_flags then
+        nil_flags = BitTools.calculate_nil_flags(data, self.columns:count())
     end
     if self.filter_nil then
         if self.columns.nil_record_flags == nil_flags then
@@ -48,9 +47,6 @@ function Batch:add(data, nil_flags)
                 end
             end
         end
-    end
-    if not nil_flags then
-        nil_flags = BitTools.calculate_nil_flags(data, self.columns:count())
     end
     table.insert(self.datas, data)
     table.insert(self.nil_flags, nil_flags)
