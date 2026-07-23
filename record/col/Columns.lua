@@ -27,7 +27,7 @@ function Columns.new(columns_list)
     if not first_col or first_col.type_name ~= Columns.TIMESTAMP_COL.type_name then
         error("Columns.new: The first column must be 'timestamp'.")
     end
-    self.cols = {}
+    self.cols = table.create(#columns_list, #columns_list)
     self.record_size = Columns.NIL_FLAGS_COL.size
     self.format_string = Columns.NIL_FLAGS_COL.format
     self.nil_record_flags = BitTools.calculate_nil_record_flags(#columns_list)
@@ -41,7 +41,7 @@ function Columns.new(columns_list)
 end
 
 function Columns.from_config(config)
-    local cols = {}
+    local cols = table.create(#config.columns, 0)
     for i, column in ipairs(config.columns) do
         if not column.name then
             error(string.format("Column %d: 'name' is missing.", i))

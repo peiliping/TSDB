@@ -103,7 +103,7 @@ local function handle_write(args)
             count = count + 1
             if count >= DataTable.LIMIT_SIZE then
                 print(ts_table:write_records(batch))
-                batch = Batch.new(ts_table.columns, false)
+                batch = Batch.new(ts_table.columns, false, DataTable.LIMIT_SIZE)
                 count = 0
             end
         end
@@ -148,7 +148,7 @@ local function handle_rollup(args)
     local end_ts = check_arg("end_ts", tonumber(args[5]))
     local aggs = Functions.parse_expression(src_table.config.rollup_expr, src_table.columns)
     local cb = function(ring_buffer)
-        local batch = Batch.new(dest_table.columns, false)
+        local batch = Batch.new(dest_table.columns, false, ring_buffer:size())
         for i = 1, ring_buffer:size() do
             batch:add(ring_buffer:get(i))
         end
@@ -169,7 +169,7 @@ local function handle_parallel(args)
     local size = check_arg("size", tonumber(args[6]))
     local aggs = Functions.parse_expression(src_table.config.parallel_expr, src_table.columns)
     local cb = function(ring_buffer)
-        local batch = Batch.new(dest_table.columns, false)
+        local batch = Batch.new(dest_table.columns, false, ring_buffer:size())
         for i = 1, ring_buffer:size() do
             batch:add(ring_buffer:get(i))
         end

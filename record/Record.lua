@@ -98,7 +98,7 @@ function Record:to_string(_cache)
         return table.concat(self.data, " ")
     else
         if not _cache then
-            _cache = {}
+            _cache = table.create(self.columns:count(), 0)
         end
         for i = 1, self.columns:count() do
             _cache[i] = self:get_value_by_index(i, "nil");

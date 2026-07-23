@@ -96,12 +96,13 @@ end
 
 function DataTable:query_records(start_time, end_time, filter_nil)
     self:_check_init()
-    local batch = Batch.new(self.columns, filter_nil)
     local aligned_start = align_to_interval(start_time, self.interval)
     local aligned_end = align_to_interval(end_time, self.interval)
-    if (aligned_end - aligned_start) / self.interval > DataTable.LIMIT_SIZE then
+    local estimated_rows = (aligned_end - aligned_start) / self.interval
+    if estimated_rows > DataTable.LIMIT_SIZE then
         error("Time Range is too large.")
     end
+    local batch = Batch.new(self.columns, filter_nil, estimated_rows)
     self.data_file:read(batch, aligned_start, aligned_end)
     return batch
 end
@@ -166,8 +167,8 @@ function DataTable:query_agg_sliding(start_time, end_time, sliding_size, mr_func
     self:_check_init()
     local group = self:query_group(start_time, end_time, true)
     local result = RingBuffer.new(DataTable.LIMIT_SIZE)
-    local column_datas = {}
     local col_count = self.columns:count()
+    local column_datas = table.create(col_count, 0)
     for i = 2, col_count do
         column_datas[i] = RingBuffer.new(sliding_size)
     end

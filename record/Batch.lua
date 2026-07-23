@@ -12,14 +12,19 @@ local Batch = {
 
 Batch.__index = Batch
 
-function Batch.new(columns, filter_nil)
+function Batch.new(columns, filter_nil, estimated_rows)
     local self = setmetatable({}, Batch)
     if not columns or type(columns) ~= "table" then
         error("Batch.new: 'columns' must be a table.")
     end
     self.columns = columns
-    self.datas = {}
-    self.nil_flags = {}
+    if not estimated_rows then
+        self.datas = {}
+        self.nil_flags = {}
+    else
+        self.datas = table.create(estimated_rows, 0)
+        self.nil_flags = table.create(estimated_rows, 0)
+    end
     self.filter_nil = filter_nil or false
     return self
 end
