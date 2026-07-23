@@ -97,7 +97,7 @@ function Batch:get_record(index)
 end
 
 function Batch:to_binary()
-    local result = {}
+    local result = table.create(#self.datas, 0)
     local cache = {}
     for i, data in ipairs(self.datas) do
         result[i] = BinaryTools.pack_record_data(self.columns, data, self.nil_flags[i], cache)

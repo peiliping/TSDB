@@ -71,7 +71,7 @@ local function handle_write(args)
         if arg_size ~= columns_size then
             error("Args Datas Not Match SchemaSize. Expected " .. columns_size .. ", got " .. arg_size .. ".")
         end
-        local record = {}
+        local record = table.create(columns_size, 0)
         for i = 1, columns_size do
             record[i] = tonumber(args[2 + i])
             if record[i] == nil then
@@ -87,7 +87,7 @@ local function handle_write(args)
             if line == nil then
                 break
             end
-            local record = {}
+            local record = table.create(columns_size, 0)
             local value_count = 0
             for value in string.gmatch(line, "[^%s]+") do
                 value_count = value_count + 1

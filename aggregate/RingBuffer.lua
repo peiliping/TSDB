@@ -12,7 +12,7 @@ function RingBuffer.new(max_size)
         error("max_size must be positive.")
     end
     self.max_size = max_size
-    self.data = {}
+    self.data = table.create(max_size, 0)
     self.index = 0
     return self
 end
