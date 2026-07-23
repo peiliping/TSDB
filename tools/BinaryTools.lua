@@ -46,16 +46,19 @@ end
 
 function B.unpack_record_data(columns, record_binary, offset)
     local unpacked = { string.unpack(columns.format_string, record_binary, offset) }
+    local unpacked_count = #unpacked
     local nil_flags = unpacked[1]
-    local data_list = {}
+    local noffset = unpacked[unpacked_count]
     for i, col in ipairs(columns.cols) do
         if BitTools.check_bit(nil_flags, i - 1) then
-            data_list[i] = nil
+            unpacked[i] = nil
         else
-            data_list[i] = col:unpack_value(unpacked[i + 1])
+            unpacked[i] = col:unpack_value(unpacked[i + 1])
         end
     end
-    return data_list, nil_flags, unpacked[#unpacked]
+    unpacked[unpacked_count - 1] = nil
+    unpacked[unpacked_count] = nil
+    return unpacked, nil_flags, noffset
 end
 
 return B

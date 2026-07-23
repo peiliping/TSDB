@@ -78,7 +78,7 @@ function test_case.test_RecordSerialization()
     -- Floating point comparison needs tolerance
     assert(math.abs(data_list[2] - unpacked_data[2]) < 0.001, "data_list[2] should match unpacked_data[2] within tolerance")
     assert(data_list[3] == unpacked_data[3], "data_list[3] should match unpacked_data[3]")
-
+    assert(#unpacked_data == #data_list, "unpacked_data length should match data_list length")
     -- Test with nil values
     local data_list_with_nil = { 111, nil, 333 }
     local nil_flags_with_nil = BitTools.set_bit(0, 1) -- Set bit 1 for col2 (index 1)
